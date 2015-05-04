@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2014 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,13 +15,12 @@
 """
 Unit tests for the z/VM utils.
 """
-
 import mock
+from oslo_config import cfg
 
 from neutron.plugins.zvm.common import exception
 from neutron.plugins.zvm.common import utils
 from neutron.tests import base
-from oslo.config import cfg
 
 
 class TestZVMUtils(base.BaseTestCase):
@@ -45,9 +42,9 @@ class TestZVMUtils(base.BaseTestCase):
         super(TestZVMUtils, self).setUp()
         self.addCleanup(cfg.CONF.reset)
         cfg.CONF.set_override('zvm_xcat_username', self._FAKE_XCAT_USER,
-                                group='AGENT')
+                              group='AGENT')
         cfg.CONF.set_override('zvm_xcat_password', self._FAKE_XCAT_PW,
-                                group='AGENT')
+                              group='AGENT')
         with mock.patch(
             'neutron.plugins.zvm.common.utils.zvmUtils._get_xcat_node_name',
                 mock.Mock(return_value=self._FAKE_XCAT_NODENAME)):
@@ -87,9 +84,9 @@ class TestZVMUtils(base.BaseTestCase):
         xcat_req = mock.Mock()
         with mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request',
                         xcat_req):
-            ret = self._utils.grant_user(self._FAKE_ZHCP_NODENAME,
-                                         self._FAKE_VSWITCH,
-                                         "fake_user")
+            self._utils.grant_user(self._FAKE_ZHCP_NODENAME,
+                                   self._FAKE_VSWITCH,
+                                   "fake_user")
             url_grant_user = ('/xcatws/nodes/fakezhcp/dsh?userName='
                     'fake_xcat_user&password=fake_xcat_password&format=json')
             body_grant_user = [('command=/opt/zhcp/bin/smcli'
@@ -104,10 +101,10 @@ class TestZVMUtils(base.BaseTestCase):
                                 {'data': [['OK']]}]
         with mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request',
                         xcat_req):
-            ret = self._utils.uncouple_nic_from_vswitch(self._FAKE_VSWITCH,
-                                                self._FAKE_PORT_NAME,
-                                                self._FAKE_ZHCP_NODENAME,
-                                                "fake_user")
+            self._utils.uncouple_nic_from_vswitch(self._FAKE_VSWITCH,
+                                                  self._FAKE_PORT_NAME,
+                                                  self._FAKE_ZHCP_NODENAME,
+                                                  "fake_user")
 
             url_vdev = ('/xcatws/tables/switch?userName=fake_xcat_user&'
                         'password=fake_xcat_password&format=json&'
@@ -142,20 +139,57 @@ class TestZVMUtils(base.BaseTestCase):
             xcat_req.assert_called_with('PUT', url_revoke_user,
                                         body_revoke_user)
 
-    def test_add_vswitch_exist(self):
+    def test_check_vswitch_status(self):
+        self._utils.get_zhcp_userid = mock.MagicMock(
+                                    return_value=self._FAKE_ZHCP_USER)
+        xcat_req = mock.Mock()
+        res = {'data': [[u'zhcp: VSWITCH:  Name: L3PUB001\nzhcp:   '
+                         'Real device: 6263\n Real device: 0000\n']],
+               'errorcode': [[u'0']]}      # vswitch does exist
+        xcat_req.return_value = res
+        with mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request',
+                        xcat_req):
+            ret = self._utils._check_vswitch_status(self._FAKE_ZHCP_NODENAME,
+                                self._FAKE_VSWITCH_NAME)
+            self.assertEqual(ret, ['6263', '0000'])
+            url = ('/xcatws/nodes/fakezhcp/dsh?userName=fake_xcat_user'
+                   '&password=fake_xcat_password&format=json')
+            body = [('command=/opt/zhcp/bin/smcli'
+                    ' Virtual_Network_Vswitch_Query -T zhcp_user -s fakevsw1')]
+            xcat_req.assert_any_called('PUT', url, body)
+
+    def test_add_vswitch_exist_not_changed(self):
+        self._utils.get_zhcp_userid = mock.MagicMock(
+                                    return_value=self._FAKE_ZHCP_USER)
         res = {'errorcode': [['0']]}
         xcat_req = mock.MagicMock()
         xcat_req.return_value = res
+        self._utils._check_vswitch_status = mock.MagicMock(
+                                        return_value=['6263'])
+
+        with mock.patch.object(utils, "LOG") as log:
+            self._utils.add_vswitch(self._FAKE_ZHCP_NODENAME,
+                                    self._FAKE_VSWITCH_NAME,
+                                    '6263,6266')
+            log.debug.assert_called_with('vswitch %s is not changed',
+                                    self._FAKE_VSWITCH_NAME)
+
+    def test_add_vswitch_exist_changed(self):
+        res = {'errorcode': [['0']]}
         self._utils.get_zhcp_userid = mock.MagicMock(
-                                        return_value=self._FAKE_ZHCP_USER)
+                                    return_value=self._FAKE_ZHCP_USER)
+        xcat_req = mock.MagicMock()
+        xcat_req.return_value = res
+        self._utils._check_vswitch_status = mock.MagicMock(
+                                        return_value=['6260'])
         with mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request',
                         xcat_req):
             with mock.patch.object(utils, "LOG") as log:
                 self._utils.add_vswitch(self._FAKE_ZHCP_NODENAME,
-                                    self._FAKE_VSWITCH_NAME,
-                                    self._FAKE_VDEV)
-                log.info.assert_called_with('Vswitch %s already exists.',
-                                        self._FAKE_VSWITCH_NAME)
+                                        self._FAKE_VSWITCH_NAME,
+                                        self._FAKE_VDEV)
+                log.info.assert_called_with('change vswitch %s done.',
+                                            self._FAKE_VSWITCH_NAME)
 
     def test_add_vswitch(self):
         self._utils.get_zhcp_userid = mock.MagicMock()
@@ -163,7 +197,7 @@ class TestZVMUtils(base.BaseTestCase):
                                                 self._FAKE_ZHCP_USER,
                                                 self._FAKE_ZHCP_USER]
         xcat_req = mock.Mock()
-        res = {'errorcode': [['0']]}      # vswitch does exist
+        res = {'errorcode': [['0']], 'data': [['']]}      # vswitch does exist
         res_err = {'errorcode': [['1']]}  # vswitch does not exist
         xcat_req.side_effect = [res_err, res, res]
         with mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request',
@@ -173,12 +207,30 @@ class TestZVMUtils(base.BaseTestCase):
                                 self._FAKE_VDEV,
                                 vid=[self._FAKE_VLAN_ID])
             url = ('/xcatws/nodes/fakezhcp/dsh?userName=fake_xcat_user'
-                    '&password=fake_xcat_password&format=json')
+                   '&password=fake_xcat_password&format=json')
             body = [('command=/opt/zhcp/bin/smcli'
                     ' Virtual_Network_Vswitch_Create -T zhcp_user -n fakevsw1'
                     ' -r 1000 -c 1 -q 8 -e 0 -t 2 -v 1'
                     ' -p 1 -u 1 -G 2 -V 1')]
             xcat_req.assert_any_called('PUT', url, body)
+
+    def test_set_vswitch_rdev(self):
+        res = {'errorcode': [['0']]}
+        self._utils.get_zhcp_userid = mock.MagicMock(
+                                    return_value=self._FAKE_ZHCP_USER)
+        xcat_req = mock.MagicMock()
+        xcat_req.return_value = res
+        with mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request',
+                        xcat_req):
+            self._utils._set_vswitch_rdev(self._FAKE_ZHCP_NODENAME,
+                                          self._FAKE_VSWITCH, self._FAKE_VDEV)
+            url_set_vswitch = ('/xcatws/nodes/fakezhcp/dsh?userName='
+                    'fake_xcat_user&password=fake_xcat_password&format=json')
+            body_set_vswitch = [('command=/opt/zhcp/bin/smcli'
+                ' Virtual_Network_Vswitch_Set_Extended -T zhcp_user'
+               ' -k switch_name=fakevsw1 -k real_device_address=1000')]
+            xcat_req.assert_called_with('PUT', url_set_vswitch,
+                                        body_set_vswitch)
 
     def test_set_vswitch_port_vlan_id(self):
         self._utils._get_nic_settings = mock.MagicMock(return_value='inst1')
@@ -192,7 +244,7 @@ class TestZVMUtils(base.BaseTestCase):
                                                 self._FAKE_ZHCP_NODENAME,
                                                 self._FAKE_VSWITCH)
             url = ('/xcatws/nodes/fakezhcp/dsh?userName=fake_xcat_user'
-                    '&password=fake_xcat_password&format=json')
+                   '&password=fake_xcat_password&format=json')
             body = [('command=/opt/zhcp/bin/smcli'
                     ' Virtual_Network_Vswitch_Set_Extended -T inst1'
                     ' -k grant_userid=inst1 -k switch_name=fakevsw1'
@@ -209,7 +261,7 @@ class TestZVMUtils(base.BaseTestCase):
             ret = self._utils.get_nic_ids()
             self.assertEqual(ret, [data])
             url = ('/xcatws/tables/switch?userName=fake_xcat_user&'
-                    'password=fake_xcat_password&format=json')
+                   'password=fake_xcat_password&format=json')
             xcat_req.assert_called_with('GET', url)
 
     def test_get_node_from_port(self):
@@ -220,8 +272,8 @@ class TestZVMUtils(base.BaseTestCase):
             ret = self._utils.get_node_from_port(self._FAKE_PORT_NAME)
             self.assertEqual(ret, self._FAKE_ZHCP_NODENAME)
             url = ('/xcatws/tables/switch?userName=fake_xcat_user&'
-                    'password=fake_xcat_password&format=json&'
-                    'col=port&value=fake_port_name&attribute=node')
+                   'password=fake_xcat_password&format=json&'
+                   'col=port&value=fake_port_name&attribute=node')
             calls = [mock.call('GET', url)]
             xcat_req.assert_has_calls(calls)
 
@@ -232,8 +284,8 @@ class TestZVMUtils(base.BaseTestCase):
                         xcat_req):
             ret = self._utils.get_zhcp_userid(self._FAKE_ZHCP_NODENAME)
             url = ('/xcatws/tables/zvm?userName=fake_xcat_user&'
-                    'password=fake_xcat_password&format=json&col=node&'
-                    'value=%s&attribute=userid' % node)
+                   'password=fake_xcat_password&format=json&col=node&'
+                   'value=%s&attribute=userid' % node)
             xcat_req.assert_called_with('GET', url)
         return ret
 
@@ -254,7 +306,7 @@ class TestZVMUtils(base.BaseTestCase):
         with mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request',
                         xcat_req):
             self._utils.put_user_direct_online(self._FAKE_ZHCP_NODENAME,
-                                                    'inst1')
+                                               'inst1')
             url = ('/xcatws/nodes/fakezhcp/dsh?userName=fake_xcat_user&'
                 'password=fake_xcat_password&format=json')
             body = [('command=/opt/zhcp/bin/smcli'
@@ -269,7 +321,7 @@ class TestZVMUtils(base.BaseTestCase):
                                         self._FAKE_VSWITCH,
                                         self._FAKE_VLAN_ID)
             url = ('/xcatws/tables/switch?userName=fake_xcat_user&'
-                    'password=fake_xcat_password&format=json')
+                   'password=fake_xcat_password&format=json')
             body = ['port=fake_port_name switch.switch=fakevsw1'
                     ' switch.vlan=fake_vlan_id']
             xcat_req.assert_called_with('PUT', url, body)
@@ -281,83 +333,77 @@ class TestZVMUtils(base.BaseTestCase):
                 ' -T fakexcat -v 0800']
         xcat_req.assert_any_with('PUT', url, body)
 
-    def test_create_xcat_mgt_network_exist(self):
+    @mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request')
+    @mock.patch('neutron.plugins.zvm.common.utils.zvmUtils.'
+                'get_userid_from_node')
+    def test_create_xcat_mgt_network_exist(self, mk_get_uid, mk_xcat_req):
         nic_def = ['zhcp: Adapter:\nzhcp: Address: 0800\n'
-                'zhcp: Device count: 3\nzhcp: Adapter type: QDIO\n'
-                'zhcp: Adapter status: Coupled and active\n'
-                'zhcp: LAN owner: SYSTEM\n'
-                'zhcp: LAN name: XCATVSW2']
-        xcat_req = mock.Mock()
-        xcat_req.side_effect = [{'data': [nic_def]},
-                                {'data': [['OK']]}]
-        with mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request',
-                        xcat_req):
-            self._utils.create_xcat_mgt_network(self._FAKE_ZHCP_NODENAME,
-                                                "10.1.1.1",
-                                                "255.255.0.0",
-                                                self._FAKE_VSWITCH)
-            self._verify_query_nic(nic_def, xcat_req)
-            url = ('/xcatws/nodes/fakexcat/dsh?userName=fake_xcat_user&'
-                    'password=fake_xcat_password&format=json')
-            body = ['command=/usr/bin/perl /usr/sbin/sspqeth2.pl -a 10.1.1.1'
-                    ' -d 0800 0801 0802 -e eth2 -m 255.255.0.0 -g 10.1.1.1']
-            xcat_req.assert_called_with('PUT', url, body)
+                   'zhcp: Device count: 3\nzhcp: Adapter type: QDIO\n'
+                   'zhcp: Adapter status: Coupled and active\n'
+                   'zhcp: LAN owner: SYSTEM\n'
+                   'zhcp: LAN name: XCATVSW2']
+        mk_get_uid.return_value = 'fakeuser'
+        mk_xcat_req.side_effect = [
+            {'data': [nic_def]},
+            {'data': [['inet addr:10.1.0.1  Bcast:10.1.1.255  '
+                       'Mask:255.255.255.0']],
+             'errorcode': [['0']]}
+        ]
+        self.assertRaises(exception.zVMConfigException,
+                          self._utils.create_xcat_mgt_network,
+                          self._FAKE_ZHCP_NODENAME,
+                          "10.1.1.1",
+                          "255.255.0.0",
+                          self._FAKE_VSWITCH)
 
-    def test_create_xcat_mgt_network_not_exist(self):
+    @mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request')
+    @mock.patch('neutron.plugins.zvm.common.utils.zvmUtils.'
+                'get_userid_from_node')
+    def test_create_xcat_mgt_network_not_exist(self, mk_get_uid, mk_xcat_req):
         nic_undef = ['zhcp: Failed\nzhcp: Return Code: 212\n'
-                    'zhcp: Reason Code: 8\n'
-                    'zhcp: Description: Adapter does not exist']
-        xcat_req = mock.Mock()
-        xcat_req.side_effect = [{'data': [nic_undef]},
-                                {'data': [['OK']]}]
-        with mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request',
-                        xcat_req):
-            self._utils.create_xcat_mgt_network(self._FAKE_ZHCP_NODENAME,
-                                                "10.1.1.1",
-                                                "255.255.0.0",
-                                                self._FAKE_VSWITCH)
-            self._verify_query_nic(nic_undef, xcat_req)
-            url = ('/xcatws/nodes/fakexcat/dsh?userName=fake_xcat_user&'
-                    'password=fake_xcat_password&format=json')
-            body = ['command=vmcp define nic 0800 type qdio\n'
-                    'vmcp couple 0800 system fakevsw1\n'
-                    '/usr/bin/perl /usr/sbin/sspqeth2.pl -a 10.1.1.1'
-                    ' -d 0800 0801 0802 -e eth2 -m 255.255.0.0 -g 10.1.1.1']
-            xcat_req.assert_called_with('PUT', url, body)
+                     'zhcp: Reason Code: 8\n'
+                     'zhcp: Description: Adapter does not exist']
+        mk_get_uid.return_value = 'fakeuser'
+        mk_xcat_req.side_effect = [{'data': [nic_undef]}, {}]
 
-    def test_create_xcat_mgt_network_error(self):
+        self._utils.create_xcat_mgt_network(self._FAKE_ZHCP_NODENAME,
+                                            "10.1.1.1",
+                                            "255.255.0.0",
+                                            self._FAKE_VSWITCH)
+        url = ('/xcatws/nodes/fakexcat/dsh?userName=fake_xcat_user&'
+               'password=fake_xcat_password&format=json')
+        body = ['command=vmcp define nic 0800 type qdio\n'
+                'vmcp couple 0800 system fakevsw1\n'
+                '/usr/bin/perl /usr/sbin/sspqeth2.pl -a 10.1.1.1'
+                ' -d 0800 0801 0802 -e eth2 -m 255.255.0.0 -g 10.1.1.1']
+        mk_xcat_req.assert_called_with('PUT', url, body)
+
+    @mock.patch('neutron.plugins.zvm.common.utils.LOG.error')
+    @mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request')
+    @mock.patch('neutron.plugins.zvm.common.utils.zvmUtils.'
+                'get_userid_from_node')
+    def test_create_xcat_mgt_network_err(self, mk_get_uid, mk_xcat_req,
+                                         mk_log_err):
         nic_err = ['zhcp: Adapter:\nzhcp: Address: 0800\n'
-                'zhcp: Device count: 3\nzhcp: Adapter type: QDIO\n'
-                'zhcp: Adapter status: Not coupled\n'
-                'zhcp: LAN owner: \n'
-                'zhcp: LAN name: ']
-        smapi_err = ['Failed']
-        xcat_req = mock.Mock()
-        xcat_req.side_effect = [{'data': [nic_err]},
-                                {'data': [smapi_err]}]
-        with mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request',
-                        xcat_req):
-            with mock.patch.object(utils, "LOG") as log:
-                self._utils.create_xcat_mgt_network(self._FAKE_ZHCP_NODENAME,
-                                                    "10.1.1.1",
-                                                    "255.255.0.0",
-                                                    self._FAKE_VSWITCH)
-                self._verify_query_nic(nic_err, xcat_req)
-                log.error.assert_called_with('NIC 800 staus is unknown.')
+                   'zhcp: Device count: 3\nzhcp: Adapter type: QDIO\n'
+                   'zhcp: Adapter status: Not coupled\n'
+                   'zhcp: LAN owner: \n'
+                   'zhcp: LAN name: ']
+        mk_get_uid.return_value = 'fakexcat'
+        mk_xcat_req.return_value = {'data': [nic_err]}
 
-                self.assertRaises(exception.zvmException,
-                                    self._utils.create_xcat_mgt_network,
-                                    self._FAKE_ZHCP_NODENAME,
-                                    "10.1.1.1",
-                                    "255.255.0.0",
-                                    self._FAKE_VSWITCH)
-                self._verify_query_nic(smapi_err, xcat_req)
+        self._utils.create_xcat_mgt_network(self._FAKE_ZHCP_NODENAME,
+                                            "10.1.1.1",
+                                            "255.255.0.0",
+                                            self._FAKE_VSWITCH)
+        mk_log_err.assert_called_with("NIC 800 staus is unknown.")
 
     def test_re_grant_user(self):
         '''We assume there is three nodes valid in the xCAT MN db, they are:
         node1, node2, node4. We mock _MAX_REGRANT_USER_NUMBER to 2. So the
         process of regrant has two steps. Fisrt grant two nodes and then
-        grant one node.'''
+        grant one node.
+        '''
 
         fake_port_info = ['node1,switch,port1,10,inf1,fakezhcp,false',
                           'node2,switch,port2,10,inf2,fakezhcp,false',
@@ -398,13 +444,13 @@ class TestZVMUtils(base.BaseTestCase):
                 # removed in step 2 first, because this is easier. Then we
                 # verify the step 1.
                 for i in valid_users:
-                    cmd_vsw_couple =\
-                    ('command=echo -e "#!/bin/sh\n/opt/zhcp/bin/smcli'
-                    ' Virtual_Network_Vswitch_Set_Extended -T user0%s -k'
-                    ' switch_name=switch -k grant_userid=user0%s'
-                    ' -k user_vlan_id=10" > grant.sh' % (i, i))
-                    if mock.call('PUT', url_command, [cmd_vsw_couple]) in\
-                                                xcat_req.call_args_list:
+                    cmd_vsw_couple = (
+                        'command=echo -e "#!/bin/sh\n/opt/zhcp/bin/smcli'
+                        ' Virtual_Network_Vswitch_Set_Extended -T user0%s -k'
+                        ' switch_name=switch -k grant_userid=user0%s'
+                        ' -k user_vlan_id=10" > grant.sh' % (i, i))
+                    if mock.call('PUT', url_command,
+                            [cmd_vsw_couple]) in xcat_req.call_args_list:
                         last_user = i
                         break
                 self.assertTrue(last_user)
@@ -412,31 +458,31 @@ class TestZVMUtils(base.BaseTestCase):
                 # other two nodes has been regranted via the valid_users.
                 del(valid_users[valid_users.index(last_user)])
 
-                body_cmd_node_1 =\
-                ('command=echo -e "#!/bin/sh\n'
-                '/opt/zhcp/bin/smcli Virtual_Network_Vswitch_Set_Extended'
-                ' -T user0%s -k switch_name=switch -k grant_userid=user0%s'
-                ' -k user_vlan_id=10\n'
-                    % (valid_users[0], valid_users[0])) +\
-                ('/opt/zhcp/bin/smcli Virtual_Network_Vswitch_Set_Extended'
-                ' -T user0%s -k switch_name=switch -k grant_userid=user0%s'
-                ' -k user_vlan_id=10" > grant.sh'
-                    % (valid_users[1], valid_users[1]))
+                body_cmd_node_1 = (
+                    'command=echo -e "#!/bin/sh\n'
+                    '/opt/zhcp/bin/smcli Virtual_Network_Vswitch_Set_Extended'
+                    ' -T user0%s -k switch_name=switch -k grant_userid=user0%s'
+                    ' -k user_vlan_id=10\n' %
+                    (valid_users[0], valid_users[0])) + (
+                    '/opt/zhcp/bin/smcli Virtual_Network_Vswitch_Set_Extended'
+                    ' -T user0%s -k switch_name=switch -k grant_userid=user0%s'
+                    ' -k user_vlan_id=10" > grant.sh' %
+                    (valid_users[1], valid_users[1]))
 
-                body_cmd_node_2 =\
-                ('command=echo -e "#!/bin/sh\n'
-                '/opt/zhcp/bin/smcli Virtual_Network_Vswitch_Set_Extended'
-                ' -T user0%s -k switch_name=switch -k grant_userid=user0%s'
-                ' -k user_vlan_id=10\n'
-                    % (valid_users[1], valid_users[1])) +\
-                ('/opt/zhcp/bin/smcli Virtual_Network_Vswitch_Set_Extended'
-                ' -T user0%s -k switch_name=switch -k grant_userid=user0%s'
-                ' -k user_vlan_id=10" > grant.sh'
-                    % (valid_users[0], valid_users[0]))
+                body_cmd_node_2 = (
+                    'command=echo -e "#!/bin/sh\n'
+                    '/opt/zhcp/bin/smcli Virtual_Network_Vswitch_Set_Extended'
+                    ' -T user0%s -k switch_name=switch -k grant_userid=user0%s'
+                    ' -k user_vlan_id=10\n' %
+                    (valid_users[1], valid_users[1])) + (
+                    '/opt/zhcp/bin/smcli Virtual_Network_Vswitch_Set_Extended'
+                    ' -T user0%s -k switch_name=switch -k grant_userid=user0%s'
+                    ' -k user_vlan_id=10" > grant.sh' %
+                    (valid_users[0], valid_users[0]))
                 self.assertTrue(
                     (mock.call('PUT', url_command, [body_cmd_node_1])
-                    in xcat_req.call_args_list)
-                    or (mock.call('PUT', url_command, [body_cmd_node_2])
+                    in xcat_req.call_args_list) or
+                    (mock.call('PUT', url_command, [body_cmd_node_2])
                     in xcat_req.call_args_list))
 
     def test_query_xcat_uptime(self):
@@ -466,6 +512,6 @@ class TestZVMUtils(base.BaseTestCase):
             ret = self._utils.query_zvm_uptime(self._FAKE_ZHCP_NODENAME)
             self.assertEqual(ret, '2014-06-11 01:38:37 EDT')
             url = ('/xcatws/nodes/fakezhcp/dsh?userName=fake_xcat_user&'
-                    'password=fake_xcat_password&format=json')
+                   'password=fake_xcat_password&format=json')
             body = ['command=/opt/zhcp/bin/smcli System_Info_Query']
             xcat_req.assert_called_with('PUT', url, body)

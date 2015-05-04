@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2014 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,12 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import xcatutils
+import re
 
-from oslo.config import cfg
-from neutron.openstack.common import log as logging
-from neutron.openstack.common.gettextutils import _
+from oslo_config import cfg
+from oslo_log import log as logging
+
+from neutron.i18n import _, _LE, _LW
 from neutron.plugins.zvm.common import exception
+from neutron.plugins.zvm.common import xcatutils
+
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -40,20 +41,21 @@ class zvmUtils(object):
     def get_nic_ids(self):
         addp = ''
         url = self._xcat_url.tabdump("/switch", addp)
-        nic_settings = xcatutils.xcat_request("GET", url)
+        with xcatutils.expect_invalid_xcat_resp_data():
+            nic_settings = xcatutils.xcat_request("GET", url)['data'][0]
         # remove table header
-        nic_settings['data'][0].pop(0)
+        nic_settings.pop(0)
         # it's possible to return empty array
-        return nic_settings['data'][0]
+        return nic_settings
 
     def _get_nic_settings(self, port_id, field=None, get_node=False):
         """Get NIC information from xCat switch table."""
-        LOG.debug(_("Get nic information for port: %s"), port_id)
+        LOG.debug("Get nic information for port: %s", port_id)
         addp = '&col=port&value=%s' % port_id + '&attribute=%s' % (
                                                 field and field or 'node')
         url = self._xcat_url.gettab("/switch", addp)
-        nic_settings = xcatutils.xcat_request("GET", url)
-        ret_value = nic_settings['data'][0][0]
+        with xcatutils.expect_invalid_xcat_resp_data():
+            ret_value = xcatutils.xcat_request("GET", url)['data'][0][0]
         if field is None and not get_node:
             ret_value = self.get_userid_from_node(ret_value)
         return ret_value
@@ -61,13 +63,13 @@ class zvmUtils(object):
     def get_userid_from_node(self, node):
         addp = '&col=node&value=%s&attribute=userid' % node
         url = self._xcat_url.gettab("/zvm", addp)
-        user_info = xcatutils.xcat_request("GET", url)
-        return user_info['data'][0][0]
+        with xcatutils.expect_invalid_xcat_resp_data():
+            return xcatutils.xcat_request("GET", url)['data'][0][0]
 
     def couple_nic_to_vswitch(self, vswitch_name, switch_port_name,
-                                    zhcp, userid, dm=True, immdt=True):
+                              zhcp, userid, dm=True, immdt=True):
         """Couple nic to vswitch."""
-        LOG.debug(_("Connect nic to switch: %s"), vswitch_name)
+        LOG.debug("Connect nic to switch: %s", vswitch_name)
         vdev = self._get_nic_settings(switch_port_name, "interface")
         if vdev:
             self._couple_nic(zhcp, vswitch_name, userid, vdev, dm, immdt)
@@ -78,9 +80,9 @@ class zvmUtils(object):
         return vdev
 
     def uncouple_nic_from_vswitch(self, vswitch_name, switch_port_name,
-                                    zhcp, userid, dm=True, immdt=True):
+                                  zhcp, userid, dm=True, immdt=True):
         """Uncouple nic from vswitch."""
-        LOG.debug(_("Disconnect nic from switch: %s"), vswitch_name)
+        LOG.debug("Disconnect nic from switch: %s", vswitch_name)
         vdev = self._get_nic_settings(switch_port_name, "interface")
         self._uncouple_nic(zhcp, userid, vdev, dm, immdt)
 
@@ -175,6 +177,32 @@ class zvmUtils(object):
             self._zhcp_userid = self.get_userid_from_node(zhcp)
         return self._zhcp_userid
 
+    @xcatutils.wrap_invalid_xcat_resp_data_error
+    def get_admin_created_vsw(self, zhcp):
+        '''Check whether the vswitch is preinstalled in env,
+        these vswitchs should not be handled by neutron-zvm-agent.
+        '''
+        url = self._xcat_url.xdsh('/%s' % self._xcat_node_name)
+        commands = 'command=vmcp q v nic'
+        body = [commands]
+        result = xcatutils.xcat_request("PUT", url, body)
+        if (result['errorcode'][0][0] != '0'):
+            raise exception.zvmException(
+                msg=("Query xcat nic info failed, %s") % result['data'][0][0])
+
+        output = result['data'][0][0].split('\n')
+        vswitch = []
+        index = 0
+        for i in output:
+            if ('0600' in i) or ('0700' in i):
+                vsw_start = output[index + 1].rfind(' ') + 1
+                vswitch.append(output[index + 1][vsw_start:])
+            index += 1
+        LOG.debug("admin config vswitch is %s" % vswitch)
+
+        return vswitch
+
+    @xcatutils.wrap_invalid_xcat_resp_data_error
     def add_vswitch(self, zhcp, name, rdev,
                     controller='*',
                     connection=1, queue_mem=8, router=0, network_type=2, vid=0,
@@ -189,9 +217,26 @@ class zvmUtils(object):
                   configuration file
            gvrp:0-unspecified 1-gvrp 2-nogvrp
         '''
-        if (self._does_vswitch_exist(zhcp, name)):
-            LOG.info(_('Vswitch %s already exists.'), name)
-            return
+        vswitch_info = self._check_vswitch_status(zhcp, name)
+        if vswitch_info is not None:
+            LOG.info(_('Vswitch %s already exists,check rdev info.'), name)
+            if rdev is None:
+                LOG.debug('vswitch %s is not changed', name)
+                return
+            else:
+                # as currently zvm-agent can only set one rdev for vswitch
+                # so as long one of rdev in vswitch env are same as rdevs
+                # list in config file, we think the vswitch does not change.
+                rdev_list = rdev.split(',')
+                for i in vswitch_info:
+                    for j in rdev_list:
+                        if i.strip() == j.strip():
+                            LOG.debug('vswitch %s is not changed', name)
+                            return
+
+                LOG.info(_('start changing vswitch %s '), name)
+                self._set_vswitch_rdev(zhcp, name, rdev)
+                return
 
         # if vid = 0, port_type, gvrp and native_vlanid are not
         # allowed to specified
@@ -210,7 +255,7 @@ class zvmUtils(object):
         commands += ' -n %s' % name
         if rdev:
             commands += " -r %s" % rdev.replace(',', ' ')
-        #commands += " -a %s" % osa_name
+        # commands += " -a %s" % osa_name
         if controller != '*':
             commands += " -i %s" % controller
         commands += " -c %s" % connection
@@ -226,14 +271,22 @@ class zvmUtils(object):
         body = [xdsh_commands]
 
         result = xcatutils.xcat_request("PUT", url, body)
-        if (result['errorcode'][0][0] != '0') or \
-            (not self._does_vswitch_exist(zhcp, name)):
+        if ((result['errorcode'][0][0] != '0') or
+            (self._check_vswitch_status(zhcp, name) is None)):
             raise exception.zvmException(
                 msg=("switch: %s add failed, %s") %
-                        (name, result['data'][0][0]))
+                    (name, result['data'][0][0]))
         LOG.info(_('Created vswitch %s done.'), name)
 
-    def _does_vswitch_exist(self, zhcp, vsw):
+    @xcatutils.wrap_invalid_xcat_resp_data_error
+    def _check_vswitch_status(self, zhcp, vsw):
+        '''
+        check the vswitch exists or not,return rdev info
+        return value:
+        None: vswitch does not exist
+        []: vswitch exists but does not connect to a rdev
+        ['xxxx','xxxx']:vswitch exists and 'xxxx' is rdev value
+        '''
         userid = self.get_zhcp_userid(zhcp)
         url = self._xcat_url.xdsh("/%s" % zhcp)
         commands = '/opt/zhcp/bin/smcli Virtual_Network_Vswitch_Query'
@@ -242,11 +295,34 @@ class zvmUtils(object):
         xdsh_commands = 'command=%s' % commands
         body = [xdsh_commands]
         result = xcatutils.xcat_request("PUT", url, body)
+        if (result['errorcode'][0][0] != '0' or not
+                result['data'] or not result['data'][0]):
+            return None
+        else:
+            output = re.findall('Real device: (.*)\n', result['data'][0][0])
+            return output
 
-        return (result['errorcode'][0][0] == '0')
+    @xcatutils.wrap_invalid_xcat_resp_data_error
+    def _set_vswitch_rdev(self, zhcp, vsw, rdev):
+        """Set vswitch's rdev."""
+        userid = self.get_zhcp_userid(zhcp)
+        url = self._xcat_url.xdsh("/%s" % zhcp)
+        commands = '/opt/zhcp/bin/smcli Virtual_Network_Vswitch_Set_Extended'
+        commands += ' -T %s' % userid
+        commands += ' -k switch_name=%s' % vsw
+        if rdev:
+            commands += ' -k real_device_address=%s' % rdev.replace(',', ' ')
+        xdsh_commands = 'command=%s' % commands
+        body = [xdsh_commands]
+        result = xcatutils.xcat_request("PUT", url, body)
+        if (result['errorcode'][0][0] != '0'):
+            raise exception.zvmException(
+                msg=("switch: %s changes failed, %s") %
+                    (vsw, result['data'][0][0]))
+        LOG.info(_('change vswitch %s done.'), vsw)
 
     def re_grant_user(self, zhcp):
-        """Grant user again after z/VM is re-IPLed"""
+        """Grant user again after z/VM is re-IPLed."""
         ports_info = self._get_userid_vswitch_vlan_id_mapping(zhcp)
         records_num = 0
         cmd = ''
@@ -277,7 +353,7 @@ class zvmUtils(object):
                 # just in case there are bad records of vlan info which
                 # could be a string
                 LOG.warn(_("Unknown vlan '%(vlan)s' for user %(user)s."),
-                            {'vlan': port['vlan_id'], 'user': port['userid']})
+                         {'vlan': port['vlan_id'], 'user': port['userid']})
                 cmd += '\n'
                 continue
             records_num += 1
@@ -315,6 +391,7 @@ class zvmUtils(object):
                                   'userid': None,
                                   'vlan_id': port_vid}
 
+        @xcatutils.wrap_invalid_xcat_resp_data_error
         def get_all_userid():
             users = {}
             addp = ''
@@ -350,10 +427,12 @@ class zvmUtils(object):
         body = [commands]
         xcatutils.xcat_request("PUT", url, body)
 
+    @xcatutils.wrap_invalid_xcat_resp_data_error
     def create_xcat_mgt_network(self, zhcp, mgt_ip, mgt_mask, mgt_vswitch):
         url = self._xcat_url.xdsh("/%s" % zhcp)
         xdsh_commands = ('command=smcli Virtual_Network_Adapter_Query'
-                  ' -T %s -v 0800') % self._xcat_node_name
+                  ' -T %s -v 0800') % self.get_userid_from_node(
+                                              self._xcat_node_name)
         body = [xdsh_commands]
         result = xcatutils.xcat_request("PUT", url, body)['data'][0][0]
         code = result.split("\n")
@@ -365,11 +444,29 @@ class zvmUtils(object):
         elif len(code) == 7:
             status = code[4].split(': ')[2]
             if status == 'Coupled and active':
-                # we just assign the IP/mask,
-                # no matter if it is assigned or not
-                LOG.info(_("Assign IP for NIC 800."))
+                # Only support one management network.
+                url = self._xcat_url.xdsh("/%s") % self._xcat_node_name
+                xdsh_commands = "command=ifconfig eth2|grep 'inet addr:'"
+                body = [xdsh_commands]
+                result = xcatutils.xcat_request("PUT", url, body)
+                if result['errorcode'][0][0] == '0' and result['data']:
+                    cur_ip = re.findall('inet addr:(.*)  Bcast:',
+                                        result['data'][0][0])
+                    cur_mask = result['data'][0][0].split("Mask:")[1]
+                    if mgt_ip != cur_ip[0]:
+                        raise exception.zVMConfigException(
+                            msg=("Only support one Management network,"
+                                 "it has been assigned by other agent!"
+                                 "Please use current management network"
+                                 "(%s/%s) to deploy." % (cur_ip[0], cur_mask)))
+                    else:
+                        LOG.debug("IP address has been assigned for NIC 800.")
+                        return
+                else:
+                    LOG.warning(_LW("Nic 800 has been created, but IP address "
+                                  "doesn't exist, will config it again"))
             else:
-                LOG.error(_("NIC 800 staus is unknown."))
+                LOG.error(_LE("NIC 800 staus is unknown."))
                 return
         else:
             raise exception.zvmException(
@@ -386,13 +483,15 @@ class zvmUtils(object):
     def _get_xcat_node_ip(self):
         addp = '&col=key&value=master&attribute=value'
         url = self._xcat_url.gettab("/site", addp)
-        return xcatutils.xcat_request("GET", url)['data'][0][0]
+        with xcatutils.expect_invalid_xcat_resp_data():
+            return xcatutils.xcat_request("GET", url)['data'][0][0]
 
     def _get_xcat_node_name(self):
         xcat_ip = self._get_xcat_node_ip()
         addp = '&col=ip&value=%s&attribute=node' % (xcat_ip)
         url = self._xcat_url.gettab("/hosts", addp)
-        return (xcatutils.xcat_request("GET", url)['data'][0][0])
+        with xcatutils.expect_invalid_xcat_resp_data():
+            return (xcatutils.xcat_request("GET", url)['data'][0][0])
 
     def query_xcat_uptime(self, zhcp):
         url = self._xcat_url.xdsh("/%s" % zhcp)
@@ -403,7 +502,8 @@ class zvmUtils(object):
         cmd += " -f %s" % "4"
         xdsh_commands = 'command=%s' % cmd
         body = [xdsh_commands]
-        ret_str = xcatutils.xcat_request("PUT", url, body)['data'][0][0]
+        with xcatutils.expect_invalid_xcat_resp_data():
+            ret_str = xcatutils.xcat_request("PUT", url, body)['data'][0][0]
         return ret_str.split('on ')[1]
 
     def query_zvm_uptime(self, zhcp):
@@ -411,5 +511,6 @@ class zvmUtils(object):
         cmd = '/opt/zhcp/bin/smcli System_Info_Query'
         xdsh_commands = 'command=%s' % cmd
         body = [xdsh_commands]
-        ret_str = xcatutils.xcat_request("PUT", url, body)['data'][0][0]
+        with xcatutils.expect_invalid_xcat_resp_data():
+            ret_str = xcatutils.xcat_request("PUT", url, body)['data'][0][0]
         return ret_str.split('\n')[4].split(': ', 3)[2]

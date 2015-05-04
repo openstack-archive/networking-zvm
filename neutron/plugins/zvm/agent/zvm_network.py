@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2014 IBM Corp.
 #
 # All Rights Reserved.
@@ -16,8 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
-from neutron.openstack.common import log as logging
+from oslo_config import cfg
+from oslo_log import log as logging
+
 from neutron.plugins.common import utils as plugin_utils
 from neutron.plugins.zvm.common import utils
 
@@ -44,19 +43,25 @@ class zvmVswitch(object):
 
 class zvmNetwork(object):
     def __init__(self):
+        self._utils = utils.zvmUtils()
         self._zhcp = CONF.AGENT.xcat_zhcp_nodename
         self._vsws = []
         self._maps = {}
         self._creat_networks()
 
     def _creat_networks(self):
+        admin_vsw = self._utils.get_admin_created_vsw(self._zhcp)
         self._maps = plugin_utils.parse_network_vlan_ranges(
-                            CONF.ml2_type_vlan.network_vlan_ranges
-                            + CONF.ml2_type_flat.flat_networks)
+                            CONF.ml2_type_vlan.network_vlan_ranges +
+                            CONF.ml2_type_flat.flat_networks)
         self._vsws = []
         for vsw in self._maps.keys():
             CONF.register_opts(vswitch_opts, vsw)
-            self._vsws.append(zvmVswitch(self._zhcp, vsw, self._maps[vsw]))
+            if vsw.upper() in admin_vsw:
+                LOG.info(_('Vswitch %s is pre-created by admin or system, '
+                    'neutron-zvm-agent will not handle it') % vsw)
+            else:
+                self._vsws.append(zvmVswitch(self._zhcp, vsw, self._maps[vsw]))
 
     def get_network_maps(self):
         return self._maps

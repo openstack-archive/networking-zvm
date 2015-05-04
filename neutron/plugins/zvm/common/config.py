@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2014 IBM Corp.
 #
 # All Rights Reserved.
@@ -16,9 +14,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
+from oslo_config import cfg
+
 from neutron.agent.common import config
-from neutron.openstack.common.gettextutils import _
+from neutron.i18n import _
+
 
 agent_opts = [
     cfg.StrOpt(
@@ -27,7 +27,9 @@ agent_opts = [
         help=_('xCat zHCP nodename in xCAT ')),
     cfg.StrOpt(
         'zvm_host',
-        help=_('z/VM host that managed by zHCP.')),
+        help=_("DEPRECATED, use 'host' in neutron.conf instead."
+               "If it is not specified, 'host' in neutron.conf"
+               "will take effect")),
     cfg.StrOpt(
         'zvm_xcat_username',
         default='admin',

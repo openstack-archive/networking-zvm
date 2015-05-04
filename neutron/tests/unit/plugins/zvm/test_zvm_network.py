@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2014 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,10 +17,11 @@ Unit tests for the z/VM network.
 """
 
 import mock
+from oslo_config import cfg
 
-from oslo.config import cfg
 from neutron.plugins.zvm.agent import zvm_network
 from neutron.tests import base
+
 
 FLAT_NETWORKS = ['flat_net1']
 VLAN_NETWORKS = ['vlan_net1:100:500']
@@ -36,11 +35,11 @@ class TestZVMNetwork(base.BaseTestCase):
     def setUp(self):
         super(TestZVMNetwork, self).setUp()
         cfg.CONF.set_override('flat_networks', FLAT_NETWORKS,
-                               group='ml2_type_flat')
+                              group='ml2_type_flat')
         cfg.CONF.set_override('network_vlan_ranges', VLAN_NETWORKS,
-                               group='ml2_type_vlan')
+                              group='ml2_type_vlan')
 
-        with mock.patch('neutron.plugins.zvm.common.utils.zvmUtils') as utils:
+        with mock.patch('neutron.plugins.zvm.common.utils.zvmUtils'):
             self._zvm_network = zvm_network.zvmNetwork()
 
     def test_get_network_maps(self):

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2014 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,10 +17,12 @@ Unit tests for neutron z/VM driver
 """
 
 import mock
+from oslo_config import cfg
 
 from neutron.plugins.zvm.agent import zvm_neutron_agent
+from neutron.plugins.zvm.common import exception
 from neutron.tests import base
-from oslo.config import cfg
+
 
 FLAT_NETWORKS = ['flat_net1']
 VLAN_NETWORKS = ['vlan_net1:100:500']
@@ -46,9 +46,13 @@ class TestZVMNeutronAgent(base.BaseTestCase):
         cfg.CONF.set_override('rpc_backend',
                               'neutron.openstack.common.rpc.impl_fake')
         cfg.CONF.set_override('flat_networks', FLAT_NETWORKS,
-                               group='ml2_type_flat')
+                              group='ml2_type_flat')
         cfg.CONF.set_override('network_vlan_ranges', VLAN_NETWORKS,
-                               group='ml2_type_vlan')
+                              group='ml2_type_vlan')
+        cfg.CONF.set_override('xcat_mgt_ip', '10.10.10.1',
+                              group='AGENT')
+        cfg.CONF.set_override('xcat_mgt_mask', '255.255.255.0',
+                              group='AGENT')
 
         mock.patch('neutron.openstack.common.loopingcall.'
                    'FixedIntervalLoopingCall',
@@ -118,8 +122,8 @@ class TestZVMNeutronAgent(base.BaseTestCase):
 
     def test_treat_devices_added_down_port(self):
         details = dict(port_id='added_port_down', physical_network='vsw',
-                        segmentation_id='10', network_id='fake_net',
-                        network_type='flat', admin_state_up=False)
+                       segmentation_id='10', network_id='fake_net',
+                       network_type='flat', admin_state_up=False)
         attrs = {'get_device_details.return_value': details}
         self.agent.plugin_rpc.configure_mock(**attrs)
         with mock.patch.object(self.agent, "_treat_vif_port",
@@ -129,8 +133,8 @@ class TestZVMNeutronAgent(base.BaseTestCase):
 
     def test_treat_devices_added_up_port(self):
         details = dict(port_id='added_port', physical_network='vsw',
-                        segmentation_id='10', network_id='fake_net',
-                        network_type='flat', admin_state_up=True)
+                       segmentation_id='10', network_id='fake_net',
+                       network_type='flat', admin_state_up=True)
         attrs = {'get_device_details.return_value': details}
         self.agent.plugin_rpc.configure_mock(**attrs)
         with mock.patch.object(self.agent, "_treat_vif_port",
@@ -200,10 +204,10 @@ class TestZVMNeutronAgent(base.BaseTestCase):
             self.assertTrue(bound.called)
 
         self.agent._treat_vif_port('port_id', 'network_id', 'flat',
-                                    'vsw1', '10', False)
+                                   'vsw1', '10', False)
         self.assertTrue(self.agent._utils.grant_user.called)
 
-    def test_handle_restar_zvm(self):
+    def test_handle_restart_zvm(self):
         q_xcat = mock.MagicMock(return_value="xcat uptime 2")
         q_zvm = mock.MagicMock(return_value="zvm uptime 2")
         re_grant = mock.MagicMock()
@@ -217,11 +221,13 @@ class TestZVMNeutronAgent(base.BaseTestCase):
             self.assertTrue(re_grant.called)
             self.assertTrue(self.agent._utils.create_xcat_mgt_network.called)
 
-    def test_handle_restar_zvm_exception(self):
-        q_xcat = mock.MagicMock(side_effect=
-                                Exception("xcat uptime exception"))
-        with mock.patch.object(zvm_neutron_agent, "LOG") as log:
-            with mock.patch.object(self.agent._utils,
-                    "query_xcat_uptime", q_xcat):
-                self.agent._restart_handler.send(None)
-                log.exception.assert_called_with("Failed to handle restart")
+    @mock.patch('neutron.plugins.zvm.common.utils.zvmUtils.'
+                'create_xcat_mgt_network')
+    def test_handle_restart_zvm_exception(self, mk_create_net):
+        q_xcat = mock.MagicMock(side_effect=exception.zVMConfigException(
+                                                msg="xcat Config exception"))
+        with mock.patch.object(self.agent._utils, "create_xcat_mgt_network",
+                               q_xcat):
+            self.agent._restart_handler.send(None)
+            self.assertRaises(exception.zVMConfigException,
+                              self.agent._handle_restart)

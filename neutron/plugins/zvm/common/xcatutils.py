@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2014 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,13 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+import contextlib
 import functools
 import httplib
 
-from neutron.openstack.common import jsonutils
-from neutron.openstack.common.gettextutils import _
-from neutron.openstack.common import log as logging
+from oslo_log import log as logging
+from oslo_serialization import jsonutils
+
+from neutron.i18n import _
+from neutron.i18n import _LE
 from neutron.plugins.zvm.common import config
 from neutron.plugins.zvm.common import constants
 from neutron.plugins.zvm.common import exception
@@ -35,9 +35,9 @@ class xCatURL(object):
     def __init__(self):
         """Set constant that used to form xCat url."""
         self.PREFIX = '/xcatws'
-        self.SUFFIX = '?userName=' + CONF.AGENT.zvm_xcat_username + \
-                      '&password=' + CONF.AGENT.zvm_xcat_password + \
-                      '&format=json'
+        self.SUFFIX = ('?userName=' + CONF.AGENT.zvm_xcat_username +
+                       '&password=' + CONF.AGENT.zvm_xcat_password +
+                       '&format=json')
 
         self.NODES = '/nodes'
         self.TABLES = '/tables'
@@ -94,7 +94,7 @@ class xCatConnection():
         try:
             self.conn.request(method, url, body, headers)
         except Exception as err:
-            LOG.error(_("Request to xCat server %(host)s failed: %(err)s") %
+            LOG.error(_LE("Request to xCat server %(host)s failed: %(err)s") %
                       {'host': self.host, 'err': err})
             raise exception.zVMxCatRequestFailed(xcatserver=self.host,
                                                  err=err)
@@ -117,7 +117,7 @@ class xCatConnection():
                 err = str(resp)
 
         if err is not None:
-            LOG.error(_("Request to xCat server %(host)s failed: %(err)s") %
+            LOG.error(_LE("Request to xCat server %(host)s failed: %(err)s") %
                       {'host': self.host, 'err': err})
             raise exception.zVMxCatRequestFailed(xcatserver=self.host,
                                                  err=err)
@@ -135,7 +135,7 @@ def jsonloads(jsonstr):
     try:
         return jsonutils.loads(jsonstr)
     except ValueError:
-        LOG.error(_("Respone is not in JSON format"))
+        LOG.error(_LE("Respone is not in JSON format"))
         raise exception.zVMJsonLoadsError()
 
 
@@ -150,7 +150,7 @@ def wrap_invalid_xcat_resp_data_error(function):
         try:
             return function(*arg, **kwargs)
         except (ValueError, TypeError, IndexError) as err:
-            LOG.error(_('Invalid data returned from xCat: %s') % err)
+            LOG.error(_LE('Invalid data returned from xCat: %s') % err)
             raise exception.zVMInvalidxCatResponseDataError(msg=err)
         except Exception as err:
             raise
@@ -184,11 +184,11 @@ def load_xcat_resp(message):
                 if d.get(k) is not None:
                     resp[k].append(d.get(k))
     except Exception:
-        LOG.error(_("Invalid data returned from xCat: %s") % message)
+        LOG.error(_LE("Invalid data returned from xCat: %s") % message)
         raise exception.zVMInvalidxCatResponseDataError(msg=message)
 
     if not verify_xcat_resp(resp):
-        LOG.error(_("Error returned from xCAT: %s") % message)
+        LOG.error(_LE("Error returned from xCAT: %s") % message)
         raise exception.zVMInvalidxCatResponseDataError(msg=message)
     else:
         return resp
@@ -203,3 +203,13 @@ def verify_xcat_resp(resp_dict):
         return False
     else:
         return True
+
+
+@contextlib.contextmanager
+def expect_invalid_xcat_resp_data():
+    """Catch exceptions when using xCAT response data."""
+    try:
+        yield
+    except (ValueError, TypeError, IndexError, AttributeError,
+            KeyError) as err:
+        raise exception.zVMInvalidxCatResponseDataError(msg=err)

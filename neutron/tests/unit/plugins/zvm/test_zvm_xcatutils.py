@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2014 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,8 +17,8 @@ Unit tests for the z/VM xCAT utils.
 """
 
 import mock
+from oslo_config import cfg
 
-from oslo.config import cfg
 from neutron.plugins.zvm.common import xcatutils
 from neutron.tests import base
 

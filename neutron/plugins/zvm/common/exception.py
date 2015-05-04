@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2014 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,11 +14,15 @@
 
 
 from neutron.common import exceptions as exception
-from neutron.openstack.common.gettextutils import _
+from neutron.i18n import _
 
 
 class zvmException(exception.NeutronException):
     message = _('zvmException: %(msg)s')
+
+
+class zVMConfigException(exception.NeutronException):
+    message = _('zVMConfig Error: %(msg)s')
 
 
 class zVMxCatConnectionFailed(exception.NeutronException):
