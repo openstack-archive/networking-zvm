@@ -1,0 +1,4 @@
+if [ $1 -eq 0 ] ; then
+    /usr/bin/systemctl stop neutron-zvm-agent > /dev/null 2>&1
+    /usr/bin/systemctl disable neutron-zvm-agent
+fi

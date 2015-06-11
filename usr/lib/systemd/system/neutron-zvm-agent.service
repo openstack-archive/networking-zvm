@@ -1,0 +1,11 @@
+[Unit]
+Description=OpenStack Neutron zVM Plugin
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=neutron
+ExecStart=/usr/bin/neutron-zvm-agent --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini --config-file /etc/neutron/plugins/zvm/neutron_zvm_plugin.ini --log-file /var/log/neutron/zvm-agent.log
+
+[Install]
+WantedBy=multi-user.target
