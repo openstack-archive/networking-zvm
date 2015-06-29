@@ -20,18 +20,20 @@ import time
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_service import loopingcall
 
 from neutron.agent import rpc as agent_rpc
 from neutron.common import config as common_config
 from neutron.common import constants as q_const
 from neutron.common import topics
-from neutron import context
-from neutron.openstack.common import loopingcall
-from neutron.plugins.common import constants as p_const
 from neutron.i18n import _, _LE, _LI
+from neutron import context
+from neutron.plugins.common import constants as p_const
+from neutron.plugins.ml2.drivers.zvm import mech_zvm
 from neutron.plugins.zvm.agent import zvm_network
 from neutron.plugins.zvm.common import exception
 from neutron.plugins.zvm.common import utils
+
 
 LOG = logging.getLogger(__name__)
 
@@ -60,7 +62,7 @@ class zvmNeutronAgent(object):
             'host': self._host,
             'topic': q_const.L2_AGENT_TOPIC,
             'configurations': {'vswitch_mappings': zvm_net.get_network_maps()},
-            'agent_type': q_const.AGENT_TYPE_ZVM,
+            'agent_type': mech_zvm.AGENT_TYPE_ZVM,
             'start_flag': True}
         self._setup_server_rpc()
         self._zhcp_userid = self._utils.get_zhcp_userid(self._zhcp_node)
