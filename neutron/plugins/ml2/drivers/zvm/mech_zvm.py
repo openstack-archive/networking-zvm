@@ -30,6 +30,8 @@ from neutron.plugins.ml2.drivers import mech_agent
 
 LOG = log.getLogger(__name__)
 
+AGENT_TYPE_ZVM = 'z/VM agent'
+VIF_TYPE_ZVM = 'zvm'
 
 class ZvmMechanismDriver(mech_agent.SimpleAgentMechanismDriverBase):
     """Attach to networks using zvm vswitch agent.
@@ -42,9 +44,10 @@ class ZvmMechanismDriver(mech_agent.SimpleAgentMechanismDriverBase):
 
     def __init__(self):
         super(ZvmMechanismDriver, self).__init__(
-            constants.AGENT_TYPE_ZVM,
-            portbindings.VIF_TYPE_ZVM,
+            AGENT_TYPE_ZVM,
+            VIF_TYPE_ZVM,
             {portbindings.CAP_PORT_FILTER: False})
+        portbindings.VIF_TYPES.append(VIF_TYPE_ZVM)
 
     def get_allowed_network_types(self, agent=None):
         return [p_constants.TYPE_LOCAL, p_constants.TYPE_FLAT,
