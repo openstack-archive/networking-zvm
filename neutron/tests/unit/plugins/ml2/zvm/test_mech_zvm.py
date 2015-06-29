@@ -21,16 +21,14 @@
 #    under the License.
 
 
-from neutron.common import constants
-from neutron.extensions import portbindings
 from neutron.plugins.ml2.drivers.zvm import mech_zvm
 from neutron.tests.unit.plugins.ml2 import _test_mech_agent as base
 
 
 class ZvmMechanismBaseTestCase(base.AgentMechanismBaseTestCase):
-    VIF_TYPE = portbindings.VIF_TYPE_ZVM
+    VIF_TYPE = mech_zvm.VIF_TYPE_ZVM
     CAP_PORT_FILTER = False
-    AGENT_TYPE = constants.AGENT_TYPE_ZVM
+    AGENT_TYPE = mech_zvm.AGENT_TYPE_ZVM
 
     GOOD_MAPPINGS = {'fake_physical_network': 'fake_vswitch'}
     GOOD_CONFIGS = {'vswitch_mappings': GOOD_MAPPINGS}
