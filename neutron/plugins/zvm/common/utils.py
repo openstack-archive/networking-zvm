@@ -17,7 +17,7 @@ import re
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from neutron.i18n import _, _LE, _LW
+from neutron.i18n import _, _LW
 from neutron.plugins.zvm.common import exception
 from neutron.plugins.zvm.common import xcatutils
 
@@ -429,51 +429,50 @@ class zvmUtils(object):
 
     @xcatutils.wrap_invalid_xcat_resp_data_error
     def create_xcat_mgt_network(self, zhcp, mgt_ip, mgt_mask, mgt_vswitch):
-        url = self._xcat_url.xdsh("/%s" % zhcp)
-        xdsh_commands = ('command=smcli Virtual_Network_Adapter_Query'
-                  ' -T %s -v 0800') % self.get_userid_from_node(
-                                              self._xcat_node_name)
+        url = self._xcat_url.xdsh("/%s" % self._xcat_node_name)
+        xdsh_commands = ('command=vmcp q v nic 800')
         body = [xdsh_commands]
         result = xcatutils.xcat_request("PUT", url, body)['data'][0][0]
-        code = result.split("\n")
-        # return code 212: Adapter does not exist
-        new_nic = ''
-        if len(code) == 4 and code[1].split(': ')[2] == '212':
-            new_nic = ('vmcp define nic 0800 type qdio\n' +
-                    'vmcp couple 0800 system %s\n' % (mgt_vswitch))
-        elif len(code) == 7:
-            status = code[4].split(': ')[2]
-            if status == 'Coupled and active':
-                # Only support one management network.
-                url = self._xcat_url.xdsh("/%s") % self._xcat_node_name
-                xdsh_commands = "command=ifconfig eth2|grep 'inet addr:'"
-                body = [xdsh_commands]
-                result = xcatutils.xcat_request("PUT", url, body)
-                if result['errorcode'][0][0] == '0' and result['data']:
-                    cur_ip = re.findall('inet addr:(.*)  Bcast:',
-                                        result['data'][0][0])
-                    cur_mask = result['data'][0][0].split("Mask:")[1]
-                    if mgt_ip != cur_ip[0]:
-                        raise exception.zVMConfigException(
-                            msg=("Only support one Management network,"
-                                 "it has been assigned by other agent!"
-                                 "Please use current management network"
-                                 "(%s/%s) to deploy." % (cur_ip[0], cur_mask)))
-                    else:
-                        LOG.debug("IP address has been assigned for NIC 800.")
-                        return
-                else:
+        cmd = ''
+        # nic does not exist
+        if 'does not exist' in result:
+            cmd = ('vmcp define nic 0800 type qdio\n' +
+                   'vmcp couple 0800 system %s\n' % (mgt_vswitch))
+        # nic is not coupled
+        elif "LAN: * None" in result:
+            cmd = ('vmcp couple 0800 system %s\n' % (mgt_vswitch))
+        # couple and active
+        elif "VSWITCH: SYSTEM" in result:
+            # Only support one management network.
+            url = self._xcat_url.xdsh("/%s") % self._xcat_node_name
+            xdsh_commands = "command=ifconfig eth2|grep 'inet addr:'"
+            body = [xdsh_commands]
+            result = xcatutils.xcat_request("PUT", url, body)
+            if result['errorcode'][0][0] == '0' and result['data']:
+                cur_ip = re.findall('inet addr:(.*)  Bcast:',
+                                    result['data'][0][0])
+                cur_mask = result['data'][0][0].split("Mask:")[1]
+                if not cur_ip:
                     LOG.warning(_LW("Nic 800 has been created, but IP address "
-                                  "doesn't exist, will config it again"))
+                              "is not correct, will config it again"))
+                elif (mgt_ip != cur_ip[0]) or (mgt_mask != cur_mask):
+                    raise exception.zVMConfigException(
+                        msg=("Only support one Management network,"
+                             "it has been assigned by other agent!"
+                             "Please use current management network"
+                             "(%s/%s) to deploy." % (cur_ip[0], cur_mask)))
+                else:
+                    LOG.debug("IP address has been assigned for NIC 800.")
+                    return
             else:
-                LOG.error(_LE("NIC 800 staus is unknown."))
-                return
+                LOG.warning(_LW("Nic 800 has been created, but IP address "
+                              "doesn't exist, will config it again"))
         else:
             raise exception.zvmException(
-                    msg="Unknown information from SMAPI")
+                    msg="Unknown information from command 'query v nic'")
 
         url = self._xcat_url.xdsh("/%s") % self._xcat_node_name
-        cmd = new_nic + ('/usr/bin/perl /usr/sbin/sspqeth2.pl ' +
+        cmd += ('/usr/bin/perl /usr/sbin/sspqeth2.pl ' +
               '-a %s -d 0800 0801 0802 -e eth2 -m %s -g %s'
               % (mgt_ip, mgt_mask, mgt_ip))
         xdsh_commands = 'command=%s' % cmd
@@ -493,18 +492,15 @@ class zvmUtils(object):
         with xcatutils.expect_invalid_xcat_resp_data():
             return (xcatutils.xcat_request("GET", url)['data'][0][0])
 
-    def query_xcat_uptime(self, zhcp):
-        url = self._xcat_url.xdsh("/%s" % zhcp)
-        cmd = '/opt/zhcp/bin/smcli Image_Query_Activate_Time'
-        cmd += " -T %s" % self.get_userid_from_node(
-                                self._xcat_node_name)
-        # format 4: yyyy-mm-dd
-        cmd += " -f %s" % "4"
+    def query_xcat_uptime(self):
+        url = self._xcat_url.xdsh("/%s" % self._xcat_node_name)
+        # get system uptime
+        cmd = 'date -d "$(awk -F. \'{print $1}\' /proc/uptime) second ago"'
+        cmd += ' +"%Y-%m-%d %H:%M:%S"'
         xdsh_commands = 'command=%s' % cmd
         body = [xdsh_commands]
         with xcatutils.expect_invalid_xcat_resp_data():
-            ret_str = xcatutils.xcat_request("PUT", url, body)['data'][0][0]
-        return ret_str.split('on ')[1]
+            return xcatutils.xcat_request("PUT", url, body)['data'][0][0]
 
     def query_zvm_uptime(self, zhcp):
         url = self._xcat_url.xdsh("/%s" % zhcp)
