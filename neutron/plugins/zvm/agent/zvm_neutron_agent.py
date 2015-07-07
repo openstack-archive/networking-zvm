@@ -324,7 +324,7 @@ class zvmNeutronAgent(object):
         while True:
             LOG.info(_("Try to reinitialize network ... "))
             try:
-                tmp_new_time = self._utils.query_xcat_uptime(self._zhcp_node)
+                tmp_new_time = self._utils.query_xcat_uptime()
                 if xcat_uptime != tmp_new_time:
                     self._init_xcat_mgt()
                     xcat_uptime = tmp_new_time
