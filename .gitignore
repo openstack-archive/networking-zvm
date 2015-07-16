@@ -4,6 +4,7 @@
 .coverage
 .project
 .pydevproject
+.python-version
 .settings
 .testrepository
 .tox

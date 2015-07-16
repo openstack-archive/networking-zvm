@@ -156,7 +156,7 @@ class TestZVMUtils(base.BaseTestCase):
                    '&password=fake_xcat_password&format=json')
             body = [('command=/opt/zhcp/bin/smcli'
                     ' Virtual_Network_Vswitch_Query -T zhcp_user -s fakevsw1')]
-            xcat_req.assert_any_called('PUT', url, body)
+            xcat_req.assert_any_call('PUT', url, body)
 
     def test_add_vswitch_exist_not_changed(self):
         self._utils.get_zhcp_userid = mock.MagicMock(
@@ -210,9 +210,9 @@ class TestZVMUtils(base.BaseTestCase):
                    '&password=fake_xcat_password&format=json')
             body = [('command=/opt/zhcp/bin/smcli'
                     ' Virtual_Network_Vswitch_Create -T zhcp_user -n fakevsw1'
-                    ' -r 1000 -c 1 -q 8 -e 0 -t 2 -v 1'
+                    ' -r 1000 -c 1 -q 8 -e 0 -t 2 -v f-a'
                     ' -p 1 -u 1 -G 2 -V 1')]
-            xcat_req.assert_any_called('PUT', url, body)
+            xcat_req.assert_any_call('PUT', url, body)
 
     def test_set_vswitch_rdev(self):
         res = {'errorcode': [['0']]}
