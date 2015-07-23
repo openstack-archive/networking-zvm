@@ -37,7 +37,7 @@ class zvmVswitch(object):
     def __init__(self, zhcp, name, vlan):
         self._utils = utils.zvmUtils()
         self._utils.add_vswitch(zhcp, name,
-                eval("CONF." + name + ".rdev_list"), vid=vlan)
+                getattr(CONF.get(name), "rdev_list"), vid=vlan)
         self.zhcp = zhcp
 
 

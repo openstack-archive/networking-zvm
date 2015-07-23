@@ -23,9 +23,10 @@ from neutron.plugins.zvm.agent import zvm_network
 from neutron.tests import base
 
 
-FLAT_NETWORKS = ['flat_net1']
-VLAN_NETWORKS = ['vlan_net1:100:500']
-NETWORK_MAPS = {'vlan_net1': [(100, 500)], 'flat_net1': []}
+FLAT_NETWORKS = ['flat_net1', '9dotvsw']
+VLAN_NETWORKS = ['vlan_net1:100:500', '10dotvsw:10:100']
+NETWORK_MAPS = {'vlan_net1': [(100, 500)], 'flat_net1': [],
+                '9dotvsw': [], '10dotvsw': [(10, 100)]}
 
 
 class TestZVMNetwork(base.BaseTestCase):
