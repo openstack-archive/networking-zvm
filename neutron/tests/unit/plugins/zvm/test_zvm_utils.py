@@ -329,19 +329,17 @@ class TestZVMUtils(base.BaseTestCase):
     def _verify_query_nic(self, result, xcat_req):
         url = ('/xcatws/nodes/fakexcat/dsh?userName=fake_xcat_user&'
                'password=fake_xcat_password&format=json')
-        body = ['command=smcli Virtual_Network_Adapter_Query'
-                ' -T fakexcat -v 0800']
+        body = ['command=vmcp q v nic 800']
         xcat_req.assert_any_with('PUT', url, body)
 
     @mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request')
     @mock.patch('neutron.plugins.zvm.common.utils.zvmUtils.'
                 'get_userid_from_node')
     def test_create_xcat_mgt_network_exist(self, mk_get_uid, mk_xcat_req):
-        nic_def = ['zhcp: Adapter:\nzhcp: Address: 0800\n'
-                   'zhcp: Device count: 3\nzhcp: Adapter type: QDIO\n'
-                   'zhcp: Adapter status: Coupled and active\n'
-                   'zhcp: LAN owner: SYSTEM\n'
-                   'zhcp: LAN name: XCATVSW2']
+        nic_def = ['Adapter 0800.P00 Type: QDIO      '
+                   'Name: UNASSIGNED  Devices: 3\n'
+                   'MAC: 02-00-01-00-01-66         '
+                   'VSWITCH: SYSTEM XCATVSW2\n']
         mk_get_uid.return_value = 'fakeuser'
         mk_xcat_req.side_effect = [
             {'data': [nic_def]},
@@ -360,9 +358,7 @@ class TestZVMUtils(base.BaseTestCase):
     @mock.patch('neutron.plugins.zvm.common.utils.zvmUtils.'
                 'get_userid_from_node')
     def test_create_xcat_mgt_network_not_exist(self, mk_get_uid, mk_xcat_req):
-        nic_undef = ['zhcp: Failed\nzhcp: Return Code: 212\n'
-                     'zhcp: Reason Code: 8\n'
-                     'zhcp: Description: Adapter does not exist']
+        nic_undef = ['HCPNDQ040E Device 0800 does not exist']
         mk_get_uid.return_value = 'fakeuser'
         mk_xcat_req.side_effect = [{'data': [nic_undef]}, {}]
 
@@ -377,26 +373,6 @@ class TestZVMUtils(base.BaseTestCase):
                 '/usr/bin/perl /usr/sbin/sspqeth2.pl -a 10.1.1.1'
                 ' -d 0800 0801 0802 -e eth2 -m 255.255.0.0 -g 10.1.1.1']
         mk_xcat_req.assert_called_with('PUT', url, body)
-
-    @mock.patch('neutron.plugins.zvm.common.utils.LOG.error')
-    @mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request')
-    @mock.patch('neutron.plugins.zvm.common.utils.zvmUtils.'
-                'get_userid_from_node')
-    def test_create_xcat_mgt_network_err(self, mk_get_uid, mk_xcat_req,
-                                         mk_log_err):
-        nic_err = ['zhcp: Adapter:\nzhcp: Address: 0800\n'
-                   'zhcp: Device count: 3\nzhcp: Adapter type: QDIO\n'
-                   'zhcp: Adapter status: Not coupled\n'
-                   'zhcp: LAN owner: \n'
-                   'zhcp: LAN name: ']
-        mk_get_uid.return_value = 'fakexcat'
-        mk_xcat_req.return_value = {'data': [nic_err]}
-
-        self._utils.create_xcat_mgt_network(self._FAKE_ZHCP_NODENAME,
-                                            "10.1.1.1",
-                                            "255.255.0.0",
-                                            self._FAKE_VSWITCH)
-        mk_log_err.assert_called_with("NIC 800 staus is unknown.")
 
     def test_re_grant_user(self):
         '''We assume there is three nodes valid in the xCAT MN db, they are:
@@ -487,18 +463,18 @@ class TestZVMUtils(base.BaseTestCase):
 
     def test_query_xcat_uptime(self):
         xcat_uptime = {'data':
-                [['XCAT was activated on 2014-06-11 at 02:41:15']]}
+                [['2014-06-11 02:41:15']]}
         xcat_req = mock.Mock(return_value=xcat_uptime)
         with mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request',
                         xcat_req):
             with mock.patch.object(utils.zvmUtils, "get_userid_from_node",
                     mock.Mock(return_value='xcat')):
-                ret = self._utils.query_xcat_uptime(self._FAKE_ZHCP_NODENAME)
-                self.assertEqual(ret, '2014-06-11 at 02:41:15')
-                url = ('/xcatws/nodes/fakezhcp/dsh?userName=fake_xcat_user&'
+                ret = self._utils.query_xcat_uptime()
+                self.assertEqual(ret, '2014-06-11 02:41:15')
+                url = ('/xcatws/nodes/fakexcat/dsh?userName=fake_xcat_user&'
                        'password=fake_xcat_password&format=json')
-                body = ['command=/opt/zhcp/bin/smcli'
-                        ' Image_Query_Activate_Time -T xcat -f 4']
+                body = ['command=date -d "$(awk -F. \'{print $1}\' '
+                        '/proc/uptime) second ago" +"%Y-%m-%d %H:%M:%S"']
                 xcat_req.assert_called_with('PUT', url, body)
 
     def test_query_zvm_uptime(self):
