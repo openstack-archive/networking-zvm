@@ -47,7 +47,6 @@ class ZvmMechanismDriver(mech_agent.SimpleAgentMechanismDriverBase):
             AGENT_TYPE_ZVM,
             VIF_TYPE_ZVM,
             {portbindings.CAP_PORT_FILTER: False})
-        portbindings.VIF_TYPES.append(VIF_TYPE_ZVM)
 
     def get_allowed_network_types(self, agent=None):
         return [p_constants.TYPE_LOCAL, p_constants.TYPE_FLAT,
