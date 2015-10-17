@@ -1,4 +1,4 @@
 [gerrit]
 host=review.openstack.org
 port=29418
-project=stackforge/networking-zvm.git
+project=openstack/networking-zvm.git
