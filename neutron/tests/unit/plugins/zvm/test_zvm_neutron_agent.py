@@ -149,8 +149,7 @@ class TestZVMNeutronAgent(base.BaseTestCase):
         self.agent.plugin_rpc.configure_mock(**attrs)
         with mock.patch.object(zvm_neutron_agent, "LOG") as log:
             self.agent._treat_devices_added(['unknown_port'])
-            log.debug.assert_called_with(
-                    "Device %s not defined on Neutron server", "unknown_port")
+            self.assertTrue(log.warn.called)
 
     def test_treat_devices_removed_returns_true_for_missing_device(self):
         attrs = {'update_device_down.side_effect': Exception()}
