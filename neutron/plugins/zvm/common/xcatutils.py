@@ -81,11 +81,12 @@ class xCatConnection():
             LOG.error(_("Connect to xCat server %s failed") % self.host)
             raise exception.zVMxCatConnectionFailed(xcatserver=self.host)
 
-    def request(self, method, url, body=None, headers={}):
+    def request(self, method, url, body=None, headers=None):
         """Do http request to xCat server
 
         Will return (response_status, response_reason, response_body)
         """
+        headers = headers or {}
         if body is not None:
             body = jsonutils.dumps(body)
             headers = {'content-type': 'text/plain',
@@ -125,7 +126,8 @@ class xCatConnection():
         return resp
 
 
-def xcat_request(method, url, body=None, headers={}):
+def xcat_request(method, url, body=None, headers=None):
+    headers = headers or {}
     conn = xCatConnection()
     resp = conn.request(method, url, body, headers)
     return load_xcat_resp(resp['message'])
