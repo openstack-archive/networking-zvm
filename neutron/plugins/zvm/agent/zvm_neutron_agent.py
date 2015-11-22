@@ -97,7 +97,7 @@ class zvmNeutronAgent(object):
             LOG.exception(_("Failed reporting state!"))
 
     def network_delete(self, context, network_id=None):
-        LOG.debug("Network delete received. UUID: %s", network_id)
+        LOG.info(_("Network delete received. UUID: %s"), network_id)
 
     def port_update(self, context, **kwargs):
         port = kwargs.get('port')
@@ -125,7 +125,15 @@ class zvmNeutronAgent(object):
 
     def port_bound(self, port_id, net_uuid,
                    network_type, physical_network, segmentation_id, userid):
-        LOG.debug("Binding port %s", port_id)
+        LOG.info(_("Start to bind port port_id:%(port_id)s, "
+                   "net_uuid:%(net_uuid)s, network_type: %(network_type)s, "
+                   "physical_network: %(physical_network)s, "
+                   "userid: %(userid)s, segmentation_id:(segmentation_id)s"),
+                 {'port_id': port_id, 'net_uuid': net_uuid,
+                  'network_type': network_type,
+                  'physical_network': physical_network,
+                  'segmentation_id': segmentation_id,
+                  'userid': userid})
 
         self._utils.grant_user(self._zhcp_node, physical_network, userid)
         vdev = self._utils.couple_nic_to_vswitch(physical_network, port_id,
@@ -134,15 +142,18 @@ class zvmNeutronAgent(object):
                                            self._zhcp_userid)
 
         if network_type == p_const.TYPE_VLAN:
-            LOG.info(_('Binding VLAN, VLAN ID: %s'), segmentation_id)
+            LOG.info(_('Binding VLAN, VLAN ID: %(segmentation_id)s, '
+                       'port_id: %(port_id)s'),
+                     {'segmentation_id': segmentation_id,
+                      'port_id': port_id})
             self._utils.set_vswitch_port_vlan_id(segmentation_id, port_id,
                                                  vdev, self._zhcp_node,
                                                  physical_network)
         else:
-            LOG.info(_('Bind %s mode done'), network_type)
+            LOG.info(_('Bind %s port done'), port_id)
 
     def port_unbound(self, port_id):
-        LOG.debug("Unbinding port %s", port_id)
+        LOG.info(_("Unbinding port %s"), port_id)
         # uncouple is not necessary, because revoke user will uncouple it
         # automatically.
         self._utils.revoke_user(self._zhcp_node,
@@ -216,11 +227,11 @@ class zvmNeutronAgent(object):
                                      details['physical_network'],
                                      details['segmentation_id'])
                     if details.get('admin_state_up'):
-                        LOG.debug("Setting status for %s to UP", device)
+                        LOG.info(_("Setting status for %s to UP"), device)
                         self.plugin_rpc.update_device_up(
                             self.context, device, self.agent_id, self._host)
                     else:
-                        LOG.debug("Setting status for %s to DOWN", device)
+                        LOG.info(_("Setting status for %s to DOWN"), device)
                         self.plugin_rpc.update_device_down(
                             self.context, device, self.agent_id, self._host)
 
@@ -277,7 +288,7 @@ class zvmNeutronAgent(object):
                     connect = True
 
                 if port_info:
-                    LOG.debug("Devices change, info: %s" % port_info)
+                    LOG.info(_("Devices change, info: %s"), port_info)
                     self._process_network_ports(port_info)
                     ports = port_info['current']
             except exception.zVMxCatRequestFailed as e:
