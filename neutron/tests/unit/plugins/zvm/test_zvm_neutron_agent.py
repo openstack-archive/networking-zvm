@@ -82,15 +82,19 @@ class TestZVMNeutronAgent(base.BaseTestCase):
         vid = 100
         with mock.patch.object(zvm_neutron_agent, "LOG") as log:
             self._test_port_bound('vlan', vid)
-            log.info.assert_called_with('Binding VLAN, VLAN ID: %s', vid)
+            log.info.assert_called_with('Binding VLAN, VLAN ID: '
+                                        '%(segmentation_id)s, port_id: '
+                                        '%(port_id)s',
+                                        {'segmentation_id': 100,
+                                         'port_id': 1000})
 
     def test_port_bound_flat(self):
         with mock.patch.object(zvm_neutron_agent, "LOG") as log:
             self._test_port_bound('flat')
-            log.info.assert_called_with('Bind %s mode done', 'flat')
+            log.info.assert_called_with('Bind %s port done', 1000)
 
     def _test_port_bound(self, network_type, vid=None):
-        port = mock.MagicMock()
+        port = 1000
         net_uuid = NET_UUID
         mock_enable_vlan = mock.MagicMock()
         enable_vlan = False
