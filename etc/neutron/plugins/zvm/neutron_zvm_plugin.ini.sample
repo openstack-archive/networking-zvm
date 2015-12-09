@@ -39,11 +39,11 @@
 # Example: xcat_mgt_mask=255.255.0.0
 
 # (StrOpt ) rdev_list for each vswitch's uplink real device(s), seperated by ','.
-# If a vswitch does not connect an OSA, which means it does not connect to 
+# If a vswitch does not connect an OSA, which means it does not connect to
 # external network, rdev_list can be ignored.
 # A new section is required for each vswitch which has a uplink port.
 # rdev_list = 6000
-# Example: 
+# Example:
 # [xcatvsw3]
 # rdev_list = 6000,6003,6005
 
@@ -52,10 +52,10 @@
 #-----------------------------------------------------------------------------
 
 # 1. Single FLAT Mode
-# Physical network names should be identical to z/VM vswitch names. In 
+# Physical network names should be identical to z/VM vswitch names. In
 # this sample, xcatvsw2 is used for xCAT Management Network, it should be a
 # Layer 2, VLAN UNAWARE vswitch in z/VM. When create neutron network, set
-# xcatvsw2 provider network_type to flat 
+# xcatvsw2 provider network_type to flat
 
 # Neutron server:
 #
@@ -77,10 +77,10 @@
 # xcat_mgt_mask=255.255.0.0
 
 # 2. FLAT, VLAN mixed Mode
-# Physical network names should be identical to z/VM vswitch names. In 
+# Physical network names should be identical to z/VM vswitch names. In
 # this sample, xcatvsw2 is used for xCAT Management Network, it should be a
-# Layer 2, VLAN UNAWARE vswitch in z/VM, xcatvsw3 is used for OpenStack 
-# Compute/Data Network, it is a Layer 2, VLAN AWARE vswitch in z/VM. xCAT 
+# Layer 2, VLAN UNAWARE vswitch in z/VM, xcatvsw3 is used for OpenStack
+# Compute/Data Network, it is a Layer 2, VLAN AWARE vswitch in z/VM. xCAT
 # Management Network MUST be the first created network. This configuration
 # also can used for single FLAT network mode if you only create only one
 # FLAT network with xcatvsw2
