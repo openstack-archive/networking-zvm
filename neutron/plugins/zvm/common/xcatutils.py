@@ -19,7 +19,6 @@ import httplib
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
-from neutron.i18n import _
 from neutron.i18n import _LE
 from neutron.plugins.zvm.common import config
 from neutron.plugins.zvm.common import constants
@@ -78,7 +77,7 @@ class xCatConnection():
             self.conn = httplib.HTTPSConnection(self.host, None, None, None,
                                                 True, self.xcat_timeout)
         except Exception:
-            LOG.error(_("Connect to xCat server %s failed") % self.host)
+            LOG.error(_LE("Connect to xCat server %s failed") % self.host)
             raise exception.zVMxCatConnectionFailed(xcatserver=self.host)
 
     def request(self, method, url, body=None, headers=None):
