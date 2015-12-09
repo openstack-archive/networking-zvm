@@ -17,7 +17,7 @@ import re
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from neutron.i18n import _, _LW
+from neutron.i18n import _LI, _LW
 from neutron.plugins.zvm.common import exception
 from neutron.plugins.zvm.common import xcatutils
 
@@ -229,7 +229,7 @@ class zvmUtils(object):
         '''
         vswitch_info = self._check_vswitch_status(zhcp, name)
         if vswitch_info is not None:
-            LOG.info(_('Vswitch %s already exists,check rdev info.'), name)
+            LOG.info(_LI('Vswitch %s already exists,check rdev info.'), name)
             if rdev is None:
                 LOG.debug('vswitch %s is not changed', name)
                 return
@@ -244,7 +244,7 @@ class zvmUtils(object):
                             LOG.debug('vswitch %s is not changed', name)
                             return
 
-                LOG.info(_('start changing vswitch %s '), name)
+                LOG.info(_LI('start changing vswitch %s '), name)
                 self._set_vswitch_rdev(zhcp, name, rdev)
                 return
 
@@ -286,7 +286,7 @@ class zvmUtils(object):
             raise exception.zvmException(
                 msg=("switch: %s add failed, %s") %
                     (name, result['data'][0][0]))
-        LOG.info(_('Created vswitch %s done.'), name)
+        LOG.info(_LI('Created vswitch %s done.'), name)
 
     @xcatutils.wrap_invalid_xcat_resp_data_error
     def _check_vswitch_status(self, zhcp, vsw):
@@ -329,7 +329,7 @@ class zvmUtils(object):
             raise exception.zvmException(
                 msg=("switch: %s changes failed, %s") %
                     (vsw, result['data'][0][0]))
-        LOG.info(_('change vswitch %s done.'), vsw)
+        LOG.info(_LI('change vswitch %s done.'), vsw)
 
     def re_grant_user(self, zhcp):
         """Grant user again after z/VM is re-IPLed."""
@@ -362,7 +362,7 @@ class zvmUtils(object):
             except ValueError:
                 # just in case there are bad records of vlan info which
                 # could be a string
-                LOG.warn(_("Unknown vlan '%(vlan)s' for user %(user)s."),
+                LOG.warn(_LW("Unknown vlan '%(vlan)s' for user %(user)s."),
                          {'vlan': port['vlan_id'], 'user': port['userid']})
                 cmd += '\n'
                 continue
@@ -376,7 +376,7 @@ class zvmUtils(object):
                     records_num = 0
                     cmd = ''
                 except Exception:
-                    LOG.warn(_("Grant user failed"))
+                    LOG.warn(_LW("Grant user failed"))
 
         if len(cmd) > 0:
             commands = 'echo -e "#!/bin/sh\n%s" > grant.sh' % cmd[:-1]
@@ -424,7 +424,7 @@ class zvmUtils(object):
             try:
                 ports[port_id]['userid'] = users[port['nodename']]['userid']
             except Exception:
-                LOG.info(_("Garbage port found. port id: %s") % port_id)
+                LOG.info(_LI("Garbage port found. port id: %s") % port_id)
 
         return ports
 
