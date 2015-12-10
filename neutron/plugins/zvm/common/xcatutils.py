@@ -14,10 +14,10 @@
 
 import contextlib
 import functools
-import httplib
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from six.moves import http_client as httplib
 
 from neutron._i18n import _LE
 from neutron.plugins.zvm.common import config
