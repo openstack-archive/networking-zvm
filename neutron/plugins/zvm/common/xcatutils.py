@@ -14,7 +14,7 @@
 
 import contextlib
 import functools
-import httplib
+from six.moves import http_client as httplib
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
