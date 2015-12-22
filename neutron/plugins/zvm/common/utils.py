@@ -407,8 +407,7 @@ class zvmUtils(object):
             addp = ''
             url = self._xcat_url.tabdump("/zvm", addp)
             all_userids = xcatutils.xcat_request("GET", url)
-            header = '#node,hcp,userid,nodetype,parent,comments,disable'
-            all_userids['data'][0].remove(header)
+            all_userids['data'][0].pop(0)
             if len(all_userids) > 0:
                 for u in all_userids['data'][0]:
                     user_info = u.split(',')
