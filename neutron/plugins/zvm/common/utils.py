@@ -442,37 +442,36 @@ class zvmUtils(object):
         xdsh_commands = ('command=vmcp q v nic 800')
         body = [xdsh_commands]
         result = xcatutils.xcat_request("PUT", url, body)['data'][0][0]
+        (port_name, ip) = self._get_xcat_800_nic_address()
         cmd = ''
         # nic does not exist
         if 'does not exist' in result:
             cmd = ('vmcp define nic 0800 type qdio\n' +
                    'vmcp couple 0800 system %s\n' % (mgt_vswitch))
+            port_name = ("eth2" if port_name == 'ethx' else "enccw0.0.0800")
         # couple and active
         elif "VSWITCH: SYSTEM" in result:
             # Only support one management network.
-            url = self._xcat_url.xdsh("/%s") % self._xcat_node_name
-            xdsh_commands = "command=ifconfig eth2|grep 'inet addr:'"
-            body = [xdsh_commands]
-            result = xcatutils.xcat_request("PUT", url, body)
-            if result['errorcode'][0][0] == '0' and result['data']:
-                cur_ip = re.findall('inet addr:(.*)  Bcast:',
-                                    result['data'][0][0])
-                cur_mask = result['data'][0][0].split("Mask:")[1]
-                if not cur_ip:
-                    LOG.warning(_LW("Nic 800 has been created, but IP address "
-                              "is not correct, will config it again"))
-                elif mgt_ip != cur_ip[0]:
-                    raise exception.zVMConfigException(
-                        msg=("Only support one Management network,"
+            if 'x' in port_name:
+                LOG.warning(_LW("Nic 800 has been created, but IP address "
+                      "doesn't exist or not correct, will config it again"))
+                port_name = ("eth2"
+                        if port_name == 'ethx' else "enccw0.0.0800")
+            else:
+                if '/' not in ip:
+                    LOG.warning(_LW("Nic 800 has been created,"
+                    " but IP address is not correct, will config it again"))
+                else:
+                    [cur_ip, cur_mask] = ip.split("/")
+                    if mgt_ip != cur_ip:
+                        raise exception.zVMConfigException(
+                            msg=("Only support one Management network,"
                              "it has been assigned by other agent!"
                              "Please use current management network"
-                             "(%s/%s) to deploy." % (cur_ip[0], cur_mask)))
-                else:
-                    LOG.debug("IP address has been assigned for NIC 800.")
-                    return
-            else:
-                LOG.warning(_LW("Nic 800 has been created, but IP address "
-                              "doesn't exist, will config it again"))
+                             "(%s/%s) to deploy." % (cur_ip, cur_mask)))
+                    else:
+                        LOG.debug("IP address has been assigned to NIC 800.")
+                        return
         else:
             raise exception.zvmException(
                     msg="command 'query v nic' return %s,"
@@ -480,11 +479,49 @@ class zvmUtils(object):
 
         url = self._xcat_url.xdsh("/%s") % self._xcat_node_name
         cmd += ('/usr/bin/perl /usr/sbin/sspqeth2.pl ' +
-              '-a %s -d 0800 0801 0802 -e eth2 -m %s -g %s'
-              % (mgt_ip, mgt_mask, mgt_ip))
+              '-a %s -d 0800 0801 0802 -e %s -g %s -m %s'
+              % (mgt_ip, port_name, mgt_ip, mgt_mask))
         xdsh_commands = 'command=%s' % cmd
         body = [xdsh_commands]
         xcatutils.xcat_request("PUT", url, body)
+
+    @xcatutils.wrap_invalid_xcat_resp_data_error
+    def _get_xcat_800_nic_address(self):
+        port_name = ip = ''
+        is_normal = False
+        url = self._xcat_url.xdsh("/%s") % self._xcat_node_name
+        xdsh_commands = "command=ip addr"
+        body = [xdsh_commands]
+        result = xcatutils.xcat_request("PUT", url, body)
+        if result['errorcode'][0][0] == '0' and result['data']:
+            if None in result['data'][0]:
+                result['data'][0].remove(None)
+            tmp = '%s:     ' % self._xcat_node_name
+            addrs = ''.join(result['data'][0]).replace('\n',
+                                           ' ').replace(tmp, '')
+            list_addrs = addrs.split(self._xcat_node_name)[1:]
+            for addr in list_addrs:
+                port_name = re.findall('\d: (.*): <', addr)[0]
+                if "eth" in port_name:
+                    is_normal = True
+                    port_name = "ethx"
+                    if "eth2" in addr:
+                        port_name = 'eth2'
+                        ip = re.findall('inet (.*) brd', addr)
+                        break
+                elif "enccw" in port_name:
+                    is_normal = True
+                    port_name = "enccw0.x"
+                    if "enccw0.0.0800" in addr:
+                        port_name = 'enccw0.0.0800'
+                        ip = re.findall('inet (.*) brd', addr)
+                        break
+
+        if not is_normal:
+            raise exception.zvmException(
+                    msg="command 'ip addr' return %s, it is unkown "
+                        "information for zvm-agent" % result['data'][0][0])
+        return (port_name, ip[0] if ip else '')
 
     def _get_xcat_node_ip(self):
         addp = '&col=key&value=master&attribute=value'
@@ -516,4 +553,4 @@ class zvmUtils(object):
         body = [xdsh_commands]
         with xcatutils.expect_invalid_xcat_resp_data():
             ret_str = xcatutils.xcat_request("PUT", url, body)['data'][0][0]
-        return ret_str.split('\n')[4].split(': ', 3)[2]
+            return ret_str.split('\n')[4].split(': ', 3)[2]
