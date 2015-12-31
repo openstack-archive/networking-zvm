@@ -343,8 +343,8 @@ class TestZVMUtils(base.BaseTestCase):
         mk_get_uid.return_value = 'fakeuser'
         mk_xcat_req.side_effect = [
             {'data': [nic_def]},
-            {'data': [['inet addr:10.1.0.1  Bcast:10.1.1.255  '
-                       'Mask:255.255.255.0']],
+            {'data': [['inet 10.1.0.1  netmask 255.255.0.0'
+                       '  broadcast 10.1.255.255']],
              'errorcode': [['0']]}
         ]
         self.assertRaises(exception.zVMConfigException,
@@ -371,7 +371,7 @@ class TestZVMUtils(base.BaseTestCase):
         body = ['command=vmcp define nic 0800 type qdio\n'
                 'vmcp couple 0800 system fakevsw1\n'
                 '/usr/bin/perl /usr/sbin/sspqeth2.pl -a 10.1.1.1'
-                ' -d 0800 0801 0802 -e eth2 -m 255.255.0.0 -g 10.1.1.1']
+         ' -d 0800 0801 0802 -e enccw0.0.0800 -m 255.255.0.0 -g 10.1.1.1']
         mk_xcat_req.assert_called_with('PUT', url, body)
 
     def test_re_grant_user(self):

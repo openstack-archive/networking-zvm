@@ -451,16 +451,17 @@ class zvmUtils(object):
         elif "VSWITCH: SYSTEM" in result:
             # Only support one management network.
             url = self._xcat_url.xdsh("/%s") % self._xcat_node_name
-            xdsh_commands = "command=ifconfig eth2|grep 'inet addr:'"
+            xdsh_commands = "command=ifconfig enccw0.0.0800|grep 'inet '"
             body = [xdsh_commands]
             result = xcatutils.xcat_request("PUT", url, body)
             if result['errorcode'][0][0] == '0' and result['data']:
-                cur_ip = re.findall('inet addr:(.*)  Bcast:',
-                                    result['data'][0][0])
-                cur_mask = result['data'][0][0].split("Mask:")[1]
+                cur_ip = re.findall('inet (.*)  netmask',
+                                   result['data'][0][0])
+                cur_mask = re.findall('netmask (.*)  broadcast',
+                                   result['data'][0][0])
                 if not cur_ip:
-                    LOG.warning(_LW("Nic 800 has been created, but IP address "
-                              "is not correct, will config it again"))
+                    LOG.warning(_LW("Nic 800 has been created, but IP "
+                          "address is not correct, will config it again"))
                 elif mgt_ip != cur_ip[0]:
                     raise exception.zVMConfigException(
                         msg=("Only support one Management network,"
@@ -480,7 +481,7 @@ class zvmUtils(object):
 
         url = self._xcat_url.xdsh("/%s") % self._xcat_node_name
         cmd += ('/usr/bin/perl /usr/sbin/sspqeth2.pl ' +
-              '-a %s -d 0800 0801 0802 -e eth2 -m %s -g %s'
+              '-a %s -d 0800 0801 0802 -e enccw0.0.0800 -m %s -g %s'
               % (mgt_ip, mgt_mask, mgt_ip))
         xdsh_commands = 'command=%s' % cmd
         body = [xdsh_commands]
