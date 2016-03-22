@@ -13,8 +13,8 @@
 #    under the License.
 
 
+from neutron._i18n import _
 from neutron.common import exceptions as exception
-from neutron.i18n import _
 
 
 class zvmException(exception.NeutronException):

@@ -26,7 +26,7 @@ from neutron.agent import rpc as agent_rpc
 from neutron.common import config as common_config
 from neutron.common import constants as q_const
 from neutron.common import topics
-from neutron.i18n import _, _LE, _LI, _LW
+from neutron._i18n import _, _LE, _LI, _LW
 from neutron import context
 from neutron.plugins.common import constants as p_const
 from neutron.plugins.ml2.drivers.zvm import mech_zvm
@@ -225,9 +225,10 @@ class zvmNeutronAgent(object):
                             self.context, device, self.agent_id, self._host)
 
                 else:
-                    LOG.warn(_LW("Device %(device)s not defined on Neutron"
-                                 "server, The output detail is %(details)s"),
-                             {'device': device, 'details': details})
+                    LOG.warning(_LW("Device %(device)s not defined on "
+                                    "Neutron server, The output detail is "
+                                    "%(details)s"),
+                                {'device': device, 'details': details})
                     continue
             except Exception as e:
                 LOG.exception(_LE("Can not add device %(device)s: %(msg)s"),
@@ -239,7 +240,7 @@ class zvmNeutronAgent(object):
             LOG.info(_LI("Removing port %s"), device)
             try:
                 if device not in self._port_map:
-                    LOG.warn(_LW("Can't find port %s in zvm agent"), device)
+                    LOG.warning(_LW("Can't find port %s in zvm agent"), device)
                     continue
 
                 self.port_unbound(device)
