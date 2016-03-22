@@ -149,7 +149,7 @@ class TestZVMNeutronAgent(base.BaseTestCase):
         self.agent.plugin_rpc.configure_mock(**attrs)
         with mock.patch.object(zvm_neutron_agent, "LOG") as log:
             self.agent._treat_devices_added(['unknown_port'])
-            self.assertTrue(log.warn.called)
+            self.assertTrue(log.warning.called)
 
     def test_treat_devices_removed_returns_true_for_missing_device(self):
         attrs = {'update_device_down.side_effect': Exception()}
@@ -163,7 +163,7 @@ class TestZVMNeutronAgent(base.BaseTestCase):
         devices = ['unknown_port', 'fake_uuid1']
         with mock.patch.object(zvm_neutron_agent, "LOG") as log:
             self.agent._treat_devices_removed(devices)
-            log.warn.assert_called_with('Can\'t find port %s in zvm agent',
+            log.warning.assert_called_with('Can\'t find port %s in zvm agent',
                                         'unknown_port')
             self.assertTrue(self.agent.plugin_rpc.update_device_down.called)
 
