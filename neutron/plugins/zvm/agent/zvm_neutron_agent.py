@@ -22,11 +22,14 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_service import loopingcall
 
+from neutron._i18n import _
+from neutron._i18n import _LE
+from neutron._i18n import _LI
+from neutron._i18n import _LW
 from neutron.agent import rpc as agent_rpc
 from neutron.common import config as common_config
 from neutron.common import constants as q_const
 from neutron.common import topics
-from neutron.i18n import _, _LE, _LI, _LW
 from neutron import context
 from neutron.plugins.common import constants as p_const
 from neutron.plugins.ml2.drivers.zvm import mech_zvm
