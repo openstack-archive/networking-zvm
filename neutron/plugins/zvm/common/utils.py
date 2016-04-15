@@ -96,7 +96,7 @@ class zvmUtils(object):
         vdev = self._get_nic_settings(switch_port_name, "interface")
         self._uncouple_nic(zhcp, userid, vdev, dm, immdt)
 
-    def set_vswitch_port_vlan_id(self, vlan_id, switch_port_name, vdev, zhcp,
+    def set_vswitch_port_vlan_id(self, vlan_id, switch_port_name, zhcp,
                                  vswitch_name):
         userid = self._get_nic_settings(switch_port_name)
         if not userid:
