@@ -41,6 +41,7 @@ class xCatURL(object):
         self.NODES = '/nodes'
         self.TABLES = '/tables'
         self.XDSH = '/dsh'
+        self.VMS = '/vms'
 
     def tabdump(self, arg='', addp=None):
         rurl = self.PREFIX + self.TABLES + arg + self.SUFFIX
@@ -65,6 +66,9 @@ class xCatURL(object):
     def xdsh(self, arg=''):
         """Run shell command."""
         return self.PREFIX + self.NODES + arg + self.XDSH + self.SUFFIX
+
+    def chvm(self, arg=''):
+        return self.PREFIX + self.VMS + arg + self.SUFFIX
 
 
 class xCatConnection():
