@@ -99,6 +99,9 @@ class xCatURL(object):
     def version(self):
         return self.PREFIX + self.VERSION + self.SUFFIX
 
+    def chvm(self, arg=''):
+        return self.PREFIX + self.VMS + arg + self.SUFFIX
+
 
 class HTTPSClientAuthConnection(httplib.HTTPSConnection):
     """For https://wiki.openstack.org/wiki/OSSN/OSSN-0033."""
