@@ -240,7 +240,6 @@ class TestZVMUtils(base.BaseTestCase):
                         xcat_req):
             self._utils.set_vswitch_port_vlan_id(self._FAKE_VLAN_ID,
                                                 self._FAKE_PORT_NAME,
-                                                self._FAKE_VDEV,
                                                 self._FAKE_ZHCP_NODENAME,
                                                 self._FAKE_VSWITCH)
             url = ('/xcatws/nodes/fakezhcp/dsh?userName=fake_xcat_user'

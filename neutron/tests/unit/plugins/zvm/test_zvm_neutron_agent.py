@@ -127,6 +127,7 @@ class TestZVMNeutronAgent(base.BaseTestCase):
     def test_treat_devices_added_down_port(self):
         details = dict(port_id='added_port_down', physical_network='vsw',
                        segmentation_id='10', network_id='fake_net',
+                       mac_address='00:11:22:33:44:55',
                        network_type='flat', admin_state_up=False)
         attrs = {'get_device_details.return_value': details}
         self.agent.plugin_rpc.configure_mock(**attrs)
@@ -138,6 +139,7 @@ class TestZVMNeutronAgent(base.BaseTestCase):
     def test_treat_devices_added_up_port(self):
         details = dict(port_id='added_port', physical_network='vsw',
                        segmentation_id='10', network_id='fake_net',
+                       mac_address='00:11:22:33:44:55',
                        network_type='flat', admin_state_up=True)
         attrs = {'get_device_details.return_value': details}
         self.agent.plugin_rpc.configure_mock(**attrs)
