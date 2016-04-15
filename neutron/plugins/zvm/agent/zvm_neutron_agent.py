@@ -128,15 +128,13 @@ class zvmNeutronAgent(object):
         LOG.debug("Binding port %s", port_id)
 
         self._utils.grant_user(self._zhcp_node, physical_network, userid)
-        vdev = self._utils.couple_nic_to_vswitch(physical_network, port_id,
-                                                 self._zhcp_node, userid)
         self._utils.put_user_direct_online(self._zhcp_node,
                                            self._zhcp_userid)
 
         if network_type == p_const.TYPE_VLAN:
             LOG.info(_LI('Binding VLAN, VLAN ID: %s'), segmentation_id)
             self._utils.set_vswitch_port_vlan_id(segmentation_id, port_id,
-                                                 vdev, self._zhcp_node,
+                                                 self._zhcp_node,
                                                  physical_network)
         else:
             LOG.info(_LI('Bind %s mode done'), network_type)
