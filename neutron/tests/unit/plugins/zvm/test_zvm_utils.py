@@ -240,7 +240,6 @@ class TestZVMUtils(base.BaseTestCase):
                         xcat_req):
             self._utils.set_vswitch_port_vlan_id(self._FAKE_VLAN_ID,
                                                 self._FAKE_PORT_NAME,
-                                                self._FAKE_VDEV,
                                                 self._FAKE_ZHCP_NODENAME,
                                                 self._FAKE_VSWITCH)
             url = ('/xcatws/nodes/fakezhcp/dsh?userName=fake_xcat_user'
@@ -490,4 +489,24 @@ class TestZVMUtils(base.BaseTestCase):
             url = ('/xcatws/nodes/fakezhcp/dsh?userName=fake_xcat_user&'
                    'password=fake_xcat_password&format=json')
             body = ['command=/opt/zhcp/bin/smcli System_Info_Query']
+            xcat_req.assert_called_with('PUT', url, body)
+
+    def test_add_nics_to_direct(self):
+        fake_nic_list = [{'vswitch': u'vsw1',
+                          'mac': u'000000',
+                          'port_id': u'73b18231-de2f-4291-89ad-92f876348c9f'}]
+        xcat_req = mock.Mock()
+        xcat_req.side_effect = [{'data': [[self._FAKE_VDEV]]},
+                                {'data': [['OK']]},
+                                {'data': [['OK']]}]
+        with mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request',
+                        xcat_req):
+            self._utils.add_nics_to_direct(self._FAKE_ZHCP_NODENAME,
+                                           'inst1', fake_nic_list)
+            url = ('/xcatws/nodes/fakezhcp/dsh?userName=fake_xcat_user&'
+                'password=fake_xcat_password&format=json')
+            body = [('command=/opt/zhcp/bin/smcli'
+                ' Image_Definition_Update_DM -T inst1 '
+                '-k \'NICDEF=VDEV=1000 TYPE=QDIO MACID=000000 '
+                'LAN=SYSTEM SWITCHNAME=vsw1\'')]
             xcat_req.assert_called_with('PUT', url, body)
