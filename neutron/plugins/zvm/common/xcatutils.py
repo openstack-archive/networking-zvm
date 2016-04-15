@@ -44,6 +44,7 @@ class xCatURL(object):
         self.TABLES = '/tables'
         self.XDSH = '/dsh'
         self.VERSION = '/version'
+        self.VMS = '/vms'
 
     def tabdump(self, arg='', addp=None):
         rurl = self.PREFIX + self.TABLES + arg + self.SUFFIX
@@ -71,6 +72,9 @@ class xCatURL(object):
 
     def version(self):
         return self.PREFIX + self.VERSION + self.SUFFIX
+
+    def chvm(self, arg=''):
+        return self.PREFIX + self.VMS + arg + self.SUFFIX
 
 
 class HTTPSClientAuthConnection(httplib.HTTPSConnection):

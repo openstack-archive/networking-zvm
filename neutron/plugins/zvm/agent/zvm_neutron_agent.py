@@ -137,18 +137,13 @@ class zvmNeutronAgent(object):
                   'userid': userid})
 
         self._utils.grant_user(self._zhcp_node, physical_network, userid)
-        vdev = self._utils.couple_nic_to_vswitch(physical_network, port_id,
-                                                 self._zhcp_node, userid)
-        self._utils.put_user_direct_online(self._zhcp_node,
-                                           self._zhcp_userid)
-
         if network_type == p_const.TYPE_VLAN:
             LOG.info(_LI('Binding VLAN, VLAN ID: %(segmentation_id)s, '
                          'port_id: %(port_id)s'),
                      {'segmentation_id': segmentation_id,
                       'port_id': port_id})
             self._utils.set_vswitch_port_vlan_id(segmentation_id, port_id,
-                                                 vdev, self._zhcp_node,
+                                                 self._zhcp_node,
                                                  physical_network)
         else:
             LOG.info(_LI('Bind %s port done'), port_id)
@@ -192,6 +187,7 @@ class zvmNeutronAgent(object):
         return (node, userid)
 
     def _treat_devices_added(self, devices):
+        nics_info = {}
         for device in devices:
             LOG.info(_LI("Adding port %s") % device)
             try:
@@ -231,6 +227,14 @@ class zvmNeutronAgent(object):
                         LOG.info(_LI("Setting status for %s to UP"), device)
                         self.plugin_rpc.update_device_up(
                             self.context, device, self.agent_id, self._host)
+                        mac = ''.join(details['mac_address'].split(':'))[6:]
+                        if not nics_info.get(node):
+                            nics_info[node] = []
+                        nics_info[node].append(
+                                    {'port_id': details['port_id'],
+                                    'vswitch': details['physical_network'],
+                                    'mac': mac})
+                        LOG.debug("New added NIC info: %s", nics_info[node])
                     else:
                         LOG.info(_LI("Setting status for %s to DOWN"), device)
                         self.plugin_rpc.update_device_down(
@@ -246,6 +250,11 @@ class zvmNeutronAgent(object):
                 LOG.exception(_LE("Can not add device %(device)s: %(msg)s"),
                               {'device': device, 'msg': e})
                 continue
+
+        for node, nic_list in nics_info.items():
+            LOG.debug("Adding NICs for %(node)s, info: %(nic)s",
+                      {'node': node, 'nic': nic_list})
+            self._utils.add_nics_to_direct(self._zhcp_node, node, nic_list)
 
     def _treat_devices_removed(self, devices):
         for device in devices:
