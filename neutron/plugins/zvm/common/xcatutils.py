@@ -143,7 +143,7 @@ def xcat_request(method, url, body=None, headers=None):
     headers = headers or {}
     conn = xCatConnection()
     resp = conn.request(method, url, body, headers)
-    return load_xcat_resp(resp['message'])
+    return load_xcat_resp(method, url, body, resp['message'])
 
 
 def jsonloads(jsonstr):
@@ -174,7 +174,7 @@ def wrap_invalid_xcat_resp_data_error(function):
 
 
 @wrap_invalid_xcat_resp_data_error
-def load_xcat_resp(message):
+def load_xcat_resp(method, url, body, message):
     """Abstract information from xCat REST response body.
 
     As default, xCat response will in format of JSON and can be
@@ -188,7 +188,8 @@ def load_xcat_resp(message):
     """
     resp_list = jsonloads(message)['data']
     keys = constants.XCAT_RESPONSE_KEYS
-
+    msg = ("url is %(url)s, body is %(body)s, result is %(result)s" %
+           {'url': url, 'body': body, 'result': message})
     resp = {}
     try:
         for k in keys:
@@ -199,24 +200,28 @@ def load_xcat_resp(message):
                 if d.get(k) is not None:
                     resp[k].append(d.get(k))
     except Exception:
-        LOG.error(_LE("Invalid data returned from xCat: %s") % message)
-        raise exception.zVMInvalidxCatResponseDataError(msg=message)
+        LOG.error(_LE("Invalid data returned from xCat: %s") % msg)
+        raise exception.zVMInvalidxCatResponseDataError(msg=msg)
 
-    if not verify_xcat_resp(resp):
-        LOG.error(_LE("Error returned from xCAT: %s") % message)
-        raise exception.zVMInvalidxCatResponseDataError(msg=message)
+    LOG.debug("Data return from xCAT restapi: %s" % message)
+    if not verify_xcat_resp(method, resp):
+        raise exception.zVMInvalidxCatResponseDataError(msg=msg)
     else:
         return resp
 
 
 @wrap_invalid_xcat_resp_data_error
-def verify_xcat_resp(resp_dict):
+def verify_xcat_resp(method, resp_dict):
     """Check whether xCAT REST API response contains an error."""
     if resp_dict.get('error'):
         if resp_dict['error'][0][0].find('Warning'):
             return True
         return False
-    elif resp_dict.get('errorcode') and resp_dict['errorcode'][0][0] != '0':
+    elif method == "GET" and (
+        resp_dict.get('errorcode') and resp_dict['errorcode'][0][0] != '0'):
+        return False
+    elif method == "GET" and not (resp_dict.get('data')
+              and resp_dict['data'] and resp_dict['data'][0]):
         return False
     else:
         return True

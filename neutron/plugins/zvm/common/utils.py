@@ -285,7 +285,7 @@ class zvmUtils(object):
             (self._check_vswitch_status(zhcp, name) is None)):
             raise exception.zvmException(
                 msg=("switch: %s add failed, %s") %
-                    (name, result['data'][0][0]))
+                    (name, result['data']))
         LOG.info(_LI('Created vswitch %s done.'), name)
 
     @xcatutils.wrap_invalid_xcat_resp_data_error
@@ -328,7 +328,7 @@ class zvmUtils(object):
         if (result['errorcode'][0][0] != '0'):
             raise exception.zvmException(
                 msg=("switch: %s changes failed, %s") %
-                    (vsw, result['data'][0][0]))
+                    (vsw, result['data']))
         LOG.info(_LI('change vswitch %s done.'), vsw)
 
     def re_grant_user(self, zhcp):
@@ -385,6 +385,7 @@ class zvmUtils(object):
             run_command(commands)
         return ports_info
 
+    @xcatutils.wrap_invalid_xcat_resp_data_error
     def _get_userid_vswitch_vlan_id_mapping(self, zhcp):
         ports_info = self.get_nic_ids()
         ports = {}
@@ -401,7 +402,6 @@ class zvmUtils(object):
                                   'userid': None,
                                   'vlan_id': port_vid}
 
-        @xcatutils.wrap_invalid_xcat_resp_data_error
         def get_all_userid():
             users = {}
             addp = ''
