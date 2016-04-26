@@ -285,10 +285,9 @@ class zvmUtils(object):
             (self._check_vswitch_status(zhcp, name) is None)):
             raise exception.zvmException(
                 msg=("switch: %s add failed, %s") %
-                    (name, result['data'][0][0]))
+                    (name, result['data']))
         LOG.info(_LI('Created vswitch %s done.'), name)
 
-    @xcatutils.wrap_invalid_xcat_resp_data_error
     def _check_vswitch_status(self, zhcp, vsw):
         '''
         check the vswitch exists or not,return rdev info
@@ -328,7 +327,7 @@ class zvmUtils(object):
         if (result['errorcode'][0][0] != '0'):
             raise exception.zvmException(
                 msg=("switch: %s changes failed, %s") %
-                    (vsw, result['data'][0][0]))
+                    (vsw, result['data']))
         LOG.info(_LI('change vswitch %s done.'), vsw)
 
     def re_grant_user(self, zhcp):
@@ -385,6 +384,7 @@ class zvmUtils(object):
             run_command(commands)
         return ports_info
 
+    @xcatutils.wrap_invalid_xcat_resp_data_error
     def _get_userid_vswitch_vlan_id_mapping(self, zhcp):
         ports_info = self.get_nic_ids()
         ports = {}
@@ -401,12 +401,12 @@ class zvmUtils(object):
                                   'userid': None,
                                   'vlan_id': port_vid}
 
-        @xcatutils.wrap_invalid_xcat_resp_data_error
         def get_all_userid():
             users = {}
             addp = ''
             url = self._xcat_url.tabdump("/zvm", addp)
-            all_userids = xcatutils.xcat_request("GET", url)
+            with xcatutils.expect_invalid_xcat_resp_data():
+                all_userids = xcatutils.xcat_request("GET", url)
             all_userids['data'][0].pop(0)
             if len(all_userids) > 0:
                 for u in all_userids['data'][0]:
@@ -441,7 +441,8 @@ class zvmUtils(object):
         url = self._xcat_url.xdsh("/%s" % self._xcat_node_name)
         xdsh_commands = ('command=vmcp q v nic 800')
         body = [xdsh_commands]
-        result = xcatutils.xcat_request("PUT", url, body)['data'][0][0]
+        with xcatutils.expect_invalid_xcat_resp_data():
+            result = xcatutils.xcat_request("PUT", url, body)['data'][0][0]
         cmd = ''
         # nic does not exist
         if 'does not exist' in result:
@@ -453,7 +454,8 @@ class zvmUtils(object):
             url = self._xcat_url.xdsh("/%s") % self._xcat_node_name
             xdsh_commands = "command=ifconfig enccw0.0.0800|grep 'inet '"
             body = [xdsh_commands]
-            result = xcatutils.xcat_request("PUT", url, body)
+            with xcatutils.expect_invalid_xcat_resp_data():
+                result = xcatutils.xcat_request("PUT", url, body)
             if result['errorcode'][0][0] == '0' and result['data']:
                 cur_ip = re.findall('inet (.*)  netmask',
                                    result['data'][0][0])

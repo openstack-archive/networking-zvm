@@ -204,6 +204,9 @@ def verify_xcat_resp(resp_dict):
         return False
     elif resp_dict.get('errorcode') and resp_dict['errorcode'][0][0] != '0':
         return False
+    elif not (resp_dict.get('data')
+              and resp_dict['data'] and resp_dict['data'][0]):
+        return False
     else:
         return True
 
