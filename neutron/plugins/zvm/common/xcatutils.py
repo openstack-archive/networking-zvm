@@ -91,6 +91,18 @@ class xCatConnection():
             headers = {'content-type': 'text/plain',
                        'content-length': len(body)}
 
+        _rep_ptn = ''.join(('&password=', CONF.AGENT.zvm_xcat_password))
+        LOG.debug("Sending request to xCAT. xCAT-Server:%(xcat_server)s "
+                  "Request-method:%(method)s "
+                  "URL:%(url)s "
+                  "Headers:%(headers)s "
+                  "Body:%(body)s" %
+                  {'xcat_server': CONF.AGENT.zvm_xcat_server,
+                   'method': method,
+                   'url': url.replace(_rep_ptn, ''),  # hide password in log
+                   'headers': str(headers),
+                   'body': body})
+
         try:
             self.conn.request(method, url, body, headers)
         except Exception as err:
@@ -105,6 +117,8 @@ class xCatConnection():
             'status': res.status,
             'reason': res.reason,
             'message': msg}
+
+        LOG.debug("xCAT response: %s" % str(resp))
 
         # NOTE(rui): Currently, only xCat returns 200 or 201 can be
         #            considered acceptable.
