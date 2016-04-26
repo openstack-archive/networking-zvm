@@ -41,14 +41,19 @@ class TestZVMXcatUtils(base.BaseTestCase):
             self._zvm_xcat_connection = xcatutils.xCatConnection()
 
     def test_restapi_command_return_error(self):
+        fake_method = "GET"
+        fake_url = "fake"
+        fake_body = "fake"
         fake_messages = ('{"data":[{"data":'
                    '["zhcp: ERROR: Unsupported API function name",null]},'
                    '{"errorcode":["1"]}]}')
         try:
             with mock.patch.object(xcatutils, "LOG") as log:
-                xcatutils.load_xcat_resp(fake_messages)
+                xcatutils.load_xcat_resp(fake_method, fake_url,
+                                        fake_body, fake_messages)
                 log.error.assert_called_with("Error returned from xCAT: %s",
                                           fake_messages)
         except Exception:
             self.assertRaises(exception.zVMInvalidxCatResponseDataError,
-                              xcatutils.load_xcat_resp, fake_messages)
+                              xcatutils.load_xcat_resp, fake_method, fake_url,
+                              fake_body, fake_messages)

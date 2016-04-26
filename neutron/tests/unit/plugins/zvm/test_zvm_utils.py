@@ -336,13 +336,14 @@ class TestZVMUtils(base.BaseTestCase):
     @mock.patch('neutron.plugins.zvm.common.utils.zvmUtils.'
                 'get_userid_from_node')
     def test_create_xcat_mgt_network_exist(self, mk_get_uid, mk_xcat_req):
-        nic_def = ['Adapter 0800.P00 Type: QDIO      '
+        nic_def = ('Adapter 0800.P00 Type: QDIO      '
                    'Name: UNASSIGNED  Devices: 3\n'
                    'MAC: 02-00-01-00-01-66         '
-                   'VSWITCH: SYSTEM XCATVSW2\n']
+                   'VSWITCH: SYSTEM XCATVSW2\n')
+
         mk_get_uid.return_value = 'fakeuser'
         mk_xcat_req.side_effect = [
-            {'data': [nic_def]},
+            {'data': [[nic_def]]},
             {'data': [['inet 10.1.0.1  netmask 255.255.0.0'
                        '  broadcast 10.1.255.255']],
              'errorcode': [['0']]}
