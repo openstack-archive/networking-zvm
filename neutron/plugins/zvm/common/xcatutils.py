@@ -41,6 +41,7 @@ class xCatURL(object):
         self.NODES = '/nodes'
         self.TABLES = '/tables'
         self.XDSH = '/dsh'
+        self.VERSION = '/version'
 
     def tabdump(self, arg='', addp=None):
         rurl = self.PREFIX + self.TABLES + arg + self.SUFFIX
@@ -65,6 +66,9 @@ class xCatURL(object):
     def xdsh(self, arg=''):
         """Run shell command."""
         return self.PREFIX + self.NODES + arg + self.XDSH + self.SUFFIX
+
+    def version(self):
+        return self.PREFIX + self.VERSION + self.SUFFIX
 
 
 class xCatConnection():
@@ -241,3 +245,23 @@ def expect_invalid_xcat_resp_data():
     except (ValueError, TypeError, IndexError, AttributeError,
             KeyError) as err:
         raise exception.zVMInvalidxCatResponseDataError(msg=err)
+
+
+def get_xcat_version():
+    """Return the version of xCAT."""
+
+    url = xCatURL().version()
+    data = xcat_request('GET', url)['data']
+
+    with expect_invalid_xcat_resp_data(data):
+        version = data[0][0].split()[1]
+        version = version.strip()
+        return version
+
+
+def xcat_support_chvm_smcli():
+    """Return true if xCAT version support clone."""
+
+    xcat_version = get_xcat_version()
+    return map(int, xcat_version.split('.')) >= map(int,
+        constants.XCAT_SUPPORT_CHVM_SMCLI_VERSION.split('.'))

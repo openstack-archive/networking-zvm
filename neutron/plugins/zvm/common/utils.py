@@ -26,16 +26,6 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-# It means we introduced 'version' concept at 2.8.3.7
-# later on, any new features especially backward incompatible
-# change need a new version such as
-# Support_xxxx = 'x.x.x.x', then we will compare whether
-# The XCAT we are using has higher or lower version than x.x.x.x
-# and do different things according to the version
-# we might INFO in log if version is lower than XCAT_INIT_VERSION
-XCAT_INIT_VERSION = '2.8.3.7'
-
-
 class zvmUtils(object):
     _MAX_REGRANT_USER_NUMBER = 1000
 
