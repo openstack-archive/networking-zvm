@@ -17,7 +17,7 @@ import re
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from neutron.i18n import _LI, _LW
+from neutron.i18n import _LI, _LW, _LE
 from neutron.plugins.zvm.common import exception
 from neutron.plugins.zvm.common import xcatutils
 
@@ -447,6 +447,9 @@ class zvmUtils(object):
         if 'does not exist' in result:
             cmd = ('vmcp define nic 0800 type qdio\n' +
                    'vmcp couple 0800 system %s\n' % (mgt_vswitch))
+        # nic is created but not couple
+        elif 'LAN: *' in result:
+            cmd = ('vmcp couple 0800 system %s\n' % (mgt_vswitch))
         # couple and active
         elif "VSWITCH: SYSTEM" in result:
             # Only support one management network.
@@ -475,9 +478,10 @@ class zvmUtils(object):
                 LOG.warning(_LW("Nic 800 has been created, but IP address "
                               "doesn't exist, will config it again"))
         else:
-            raise exception.zvmException(
-                    msg="command 'query v nic' return %s,"
-                        " it is unkown information for zvm-agent" % result)
+            message = ("Command 'query v nic' return %s,"
+                    " it is unkown information for zvm-agent") % result
+            LOG.error(_LE("Error: %s") % message)
+            raise exception.zvmException(msg=message)
 
         url = self._xcat_url.xdsh("/%s") % self._xcat_node_name
         cmd += ('/usr/bin/perl /usr/sbin/sspqeth2.pl ' +
