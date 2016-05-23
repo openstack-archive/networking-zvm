@@ -1,0 +1,8 @@
+Code-Review+2: jichenjc <jichenjc@cn.ibm.com>
+Workflow+1: jichenjc <jichenjc@cn.ibm.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 23 May 2016 09:13:56 +0000
+Reviewed-on: https://review.openstack.org/310144
+Project: openstack/networking-zvm
+Branch: refs/heads/master
