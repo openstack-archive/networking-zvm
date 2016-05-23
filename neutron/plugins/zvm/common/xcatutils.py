@@ -202,8 +202,6 @@ def verify_xcat_resp(resp_dict):
         if resp_dict['error'][0][0].find('Warning'):
             return True
         return False
-    elif resp_dict.get('errorcode') and resp_dict['errorcode'][0][0] != '0':
-        return False
     else:
         return True
 
