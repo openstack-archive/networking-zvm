@@ -243,7 +243,8 @@ class zvmNeutronAgent(object):
                     LOG.warning(_LW("Can't find port %s in zvm agent"), device)
                     continue
 
-                self.port_unbound(device)
+                if self._port_map[device]['vswitch']:
+                    self.port_unbound(device)
                 self.plugin_rpc.update_device_down(self.context,
                                                    device,
                                                    self.agent_id)
