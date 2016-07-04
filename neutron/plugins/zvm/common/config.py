@@ -20,6 +20,12 @@ from neutron._i18n import _
 from neutron.agent.common import config
 
 
+agent_group = cfg.OptGroup("AGENT",
+                           title="zvm agent Options",
+                           help="""
+zvm agent options.
+""")
+
 agent_opts = [
     cfg.StrOpt(
         'xcat_zhcp_nodename',
@@ -32,11 +38,11 @@ agent_opts = [
                "will take effect")),
     cfg.StrOpt(
         'zvm_xcat_username',
-        default='admin',
+        default=None,
         help=_('xCat REST API username')),
     cfg.StrOpt(
         'zvm_xcat_password',
-        default='admin',
+        default=None,
         secret=True,
         help=_('Password of the xCat REST API user')),
     cfg.StrOpt(
@@ -63,6 +69,7 @@ agent_opts = [
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(agent_opts, "AGENT")
+CONF.register_group(agent_group)
+CONF.register_opts(agent_opts, group=agent_group)
 config.register_agent_state_opts_helper(cfg.CONF)
 config.register_root_helper(cfg.CONF)

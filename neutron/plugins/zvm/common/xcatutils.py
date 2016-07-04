@@ -34,6 +34,10 @@ class xCatURL(object):
     def __init__(self):
         """Set constant that used to form xCat url."""
         self.PREFIX = '/xcatws'
+        if CONF.AGENT.zvm_xcat_username is None:
+            raise Exception
+        if CONF.AGENT.zvm_xcat_password is None:
+            raise Exception
         self.SUFFIX = ('?userName=' + CONF.AGENT.zvm_xcat_username +
                        '&password=' + CONF.AGENT.zvm_xcat_password +
                        '&format=json')

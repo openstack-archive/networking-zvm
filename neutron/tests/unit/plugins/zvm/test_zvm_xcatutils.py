@@ -32,9 +32,13 @@ class TestZVMXcatUtils(base.BaseTestCase):
     def setUp(self):
         super(TestZVMXcatUtils, self).setUp()
         cfg.CONF.set_override('zvm_xcat_server',
-                              self._FAKE_XCAT_SERVER, 'AGENT')
+                              self._FAKE_XCAT_SERVER, group='AGENT')
+        cfg.CONF.set_override('zvm_xcat_username',
+                              'dummy', group='AGENT')
+        cfg.CONF.set_override('zvm_xcat_password',
+                              'dummy', group='AGENT')
         cfg.CONF.set_override('zvm_xcat_timeout',
-                              self._FAKE_XCAT_TIMEOUT, 'AGENT')
+                              self._FAKE_XCAT_TIMEOUT, group='AGENT')
         self._xcaturl = xcatutils.xCatURL()
         with mock.patch.multiple(xcatutils.httplib,
             HTTPSConnection=mock.MagicMock()):
