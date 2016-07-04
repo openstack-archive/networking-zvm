@@ -28,11 +28,14 @@ from neutron.tests import base
 class TestZVMXcatUtils(base.BaseTestCase):
     _FAKE_XCAT_SERVER = "127.0.0.1"
     _FAKE_XCAT_TIMEOUT = 300
+    _FAKE_XCAT_PASSWORD = 'pass'
 
     def setUp(self):
         super(TestZVMXcatUtils, self).setUp()
         cfg.CONF.set_override('zvm_xcat_server',
                               self._FAKE_XCAT_SERVER, 'AGENT')
+        cfg.CONF.set_override('zvm_xcat_password',
+                              self._FAKE_XCAT_PASSWORD, 'AGENT')
         cfg.CONF.set_override('zvm_xcat_timeout',
                               self._FAKE_XCAT_TIMEOUT, 'AGENT')
         self._xcaturl = xcatutils.xCatURL()
