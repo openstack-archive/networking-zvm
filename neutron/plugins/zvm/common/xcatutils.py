@@ -19,7 +19,7 @@ import httplib
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
-from neutron._i18n import _LE
+from neutron.i18n import _LE
 from neutron.plugins.zvm.common import config
 from neutron.plugins.zvm.common import constants
 from neutron.plugins.zvm.common import exception
