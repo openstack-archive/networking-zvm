@@ -16,8 +16,8 @@
 
 from oslo_config import cfg
 
-from neutron._i18n import _
 from neutron.agent.common import config
+from neutron.i18n import _
 
 
 agent_opts = [

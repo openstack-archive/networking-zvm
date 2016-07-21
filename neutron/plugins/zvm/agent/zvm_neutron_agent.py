@@ -26,7 +26,7 @@ from neutron.agent import rpc as agent_rpc
 from neutron.common import config as common_config
 from neutron.common import constants as q_const
 from neutron.common import topics
-from neutron._i18n import _, _LE, _LI, _LW
+from neutron.i18n import _, _LE, _LI, _LW
 from neutron import context
 from neutron.plugins.common import constants as p_const
 from neutron.plugins.ml2.drivers.zvm import mech_zvm
