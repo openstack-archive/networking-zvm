@@ -44,6 +44,9 @@ class xCatURL(object):
         self.TABLES = '/tables'
         self.XDSH = '/dsh'
         self.VERSION = '/version'
+        self.VMS = '/vms'
+        self.PCONTEXT = '&requestid='
+        self.PUUID = '&objectid='
 
     def tabdump(self, arg='', addp=None):
         rurl = self.PREFIX + self.TABLES + arg + self.SUFFIX
@@ -54,6 +57,30 @@ class xCatURL(object):
             return rurl + addp
         else:
             return rurl
+
+    def _append_context(self, rurl, context=None):
+        # The request ID is always optional.  When it is present, xCAT logs it
+        # so it's easier to link xCAT log entries to OpenStack log entries.
+        if isinstance(context, dict):
+            if 'request_id' in context.keys():
+                rurl = rurl + self.PCONTEXT + context.request_id
+        return rurl
+
+    def _append_instanceid(self, rurl, vmuuid):
+        # The instance ID is always optional.  When it is present, xCAT logs it
+        # so it's easier to link xCAT log entries to OpenStack log entries.
+        if vmuuid:
+            rurl = rurl + self.PUUID + vmuuid
+        return rurl
+
+    def _vms(self, arg='', vmuuid='', context=None):
+        rurl = self.PREFIX + self.VMS + arg + self.SUFFIX
+        rurl = self._append_context(rurl, context)
+        rurl = self._append_instanceid(rurl, vmuuid)
+        return rurl
+
+    def chvm(self, arg=''):
+        return self._vms(arg)
 
     def gettab(self, arg='', addp=None):
         """Get table arg, with attribute addp."""

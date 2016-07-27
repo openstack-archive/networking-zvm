@@ -512,3 +512,23 @@ class zvmUtils(object):
         with xcatutils.expect_invalid_xcat_resp_data():
             ret_str = xcatutils.xcat_request("PUT", url, body)['data'][0][0]
         return ret_str.split('\n')[4].split(': ', 3)[2]
+
+    def add_nic_to_user_direct(self, nodename, nic_info):
+        """add one NIC's info to user direct."""
+        vdev = self._get_nic_settings(nic_info['port_id'], "interface")
+
+        url = self._xcat_url.chvm('/' + nodename)
+        command = 'Image_Definition_Update_DM -T %userid%'
+        command += ' -k \'NICDEF=VDEV=%s TYPE=QDIO ' % vdev
+        command += 'MACID=%s ' % nic_info['mac']
+        command += 'LAN=SYSTEM '
+        command += 'SWITCHNAME=%s\'' % nic_info['vswitch']
+        body = ['--smcli', command]
+
+        with xcatutils.expect_invalid_xcat_resp_data():
+            xcatutils.xcat_request("PUT", url, body)
+
+    def add_nics_to_direct(self, zhcp, nodename, nic_info_list):
+        """add all NIC's info to user direct."""
+        for nic_info in nic_info_list:
+            self.add_nic_to_direct(nodename, nic_info)

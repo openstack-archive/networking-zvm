@@ -492,3 +492,25 @@ class TestZVMUtils(base.BaseTestCase):
                    'password=fake_xcat_password&format=json')
             body = ['command=/opt/zhcp/bin/smcli System_Info_Query']
             xcat_req.assert_called_with('PUT', url, body)
+
+    def test_add_nic_to_user_direct(self):
+        nic_info = {}
+        nic_info['port_id'] = '0'
+        nic_info['mac'] = '00:01:02:03:04:05'
+        nic_info['vswitch'] = 'vs1'
+        self._utils._get_nic_settings = mock.MagicMock(return_value='1000')
+        xcat_req = mock.Mock()
+
+        with mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request',
+            xcat_req):
+            self._utils.add_nic_to_user_direct('dummy', nic_info)
+            url = ('/xcatws/vms/dummy?userName=fake_xcat_user&'
+                   'password=fake_xcat_password&format=json')
+            command = ("Image_Definition_Update_DM -T %userid% "
+                       "-k 'NICDEF=VDEV=1000 TYPE=QDIO "
+                       "MACID=00:01:02:03:04:05 "
+                       "LAN=SYSTEM "
+                       "SWITCHNAME=vs1'")
+            body = ['--smcli', command]
+            calls = [mock.call('PUT', url, body)]
+            xcat_req.assert_has_calls(calls)
