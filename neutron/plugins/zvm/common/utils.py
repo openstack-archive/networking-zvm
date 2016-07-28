@@ -531,4 +531,4 @@ class zvmUtils(object):
     def add_nics_to_direct(self, zhcp, nodename, nic_info_list):
         """add all NIC's info to user direct."""
         for nic_info in nic_info_list:
-            self.add_nic_to_direct(nodename, nic_info)
+            self.add_nic_to_user_direct(nodename, nic_info)
