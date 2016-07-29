@@ -194,7 +194,7 @@ class zvmUtils(object):
         vswitch = []
         index = 0
         for i in output:
-            if ('0600' in i) or ('0700' in i):
+            if ('Adapter 0600' in i) or ('Adapter 0700' in i):
                 vsw_start = output[index + 1].rfind(' ') + 1
                 vswitch.append(output[index + 1][vsw_start:])
             index += 1
