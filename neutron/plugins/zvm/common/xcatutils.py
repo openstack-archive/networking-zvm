@@ -322,9 +322,9 @@ def get_xcat_version():
     """Return the version of xCAT."""
 
     url = xCatURL().version()
-    data = xcat_request('GET', url)['data']
 
-    with expect_invalid_xcat_resp_data(data):
+    with expect_invalid_xcat_resp_data():
+        data = xcat_request('GET', url)['data']
         version = data[0][0].split()[1]
         version = version.strip()
         return version

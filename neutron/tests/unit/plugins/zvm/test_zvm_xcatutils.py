@@ -61,3 +61,10 @@ class TestZVMXcatUtils(base.BaseTestCase):
             self.assertRaises(exception.zVMInvalidxCatResponseDataError,
                               xcatutils.load_xcat_resp, fake_method, fake_url,
                               fake_body, fake_messages)
+
+    @mock.patch('neutron.plugins.zvm.common.xcatutils.xcat_request')
+    def test_get_xcat_version(self, mock_get):
+        ret = ["Version 2.8.3.5 (built Mon Apr 27 10:50:11 EDT 2015)"]
+        mock_get.return_value = {'data': [ret]}
+        version = xcatutils.get_xcat_version()
+        self.assertEqual(version, '2.8.3.5')

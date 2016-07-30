@@ -40,6 +40,9 @@ class FakeLoopingCall(object):
 
 class TestZVMNeutronAgent(base.BaseTestCase):
 
+    _FAKE_XCAT_USER = "fake_xcat_user"
+    _FAKE_XCAT_PW = "fake_xcat_password"
+
     def setUp(self):
         super(TestZVMNeutronAgent, self).setUp()
         self.addCleanup(cfg.CONF.reset)
@@ -52,6 +55,10 @@ class TestZVMNeutronAgent(base.BaseTestCase):
         cfg.CONF.set_override('xcat_mgt_ip', '10.10.10.1',
                               group='AGENT')
         cfg.CONF.set_override('xcat_mgt_mask', '255.255.255.0',
+                              group='AGENT')
+        cfg.CONF.set_override('zvm_xcat_username', self._FAKE_XCAT_USER,
+                              group='AGENT')
+        cfg.CONF.set_override('zvm_xcat_password', self._FAKE_XCAT_PW,
                               group='AGENT')
 
         mock.patch('neutron.openstack.common.loopingcall.'
@@ -234,3 +241,19 @@ class TestZVMNeutronAgent(base.BaseTestCase):
             self.agent._restart_handler.send(None)
             self.assertRaises(exception.zVMConfigException,
                               self.agent._handle_restart)
+
+    def test_has_min_version(self):
+        self.agent._xcat_version = '1.2.3.4'
+        self.assertFalse(self.agent.has_min_version((1, 3, 3, 4)))
+        self.assertTrue(self.agent.has_min_version((1, 1, 3, 5)))
+        self.assertTrue(self.agent.has_min_version(None))
+
+    def test_has_version(self):
+        xcat_ver = (1, 2, 3, 4)
+        self.agent._xcat_version = '1.2.3.4'
+        self.assertTrue(self.agent.has_version(xcat_ver))
+
+        for xcat_ver_ in [(1, 1, 3, 4), (1, 3, 3, 2)]:
+            self.assertFalse(self.agent.has_version(xcat_ver_))
+
+        self.assertTrue(self.agent.has_version(None))

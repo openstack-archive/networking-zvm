@@ -15,12 +15,14 @@
 #    under the License.
 
 import eventlet
+import operator
 import sys
 import time
 
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_service import loopingcall
+from oslo_utils import versionutils
 
 from neutron.agent import rpc as agent_rpc
 from neutron.common import config as common_config
@@ -31,8 +33,10 @@ from neutron import context
 from neutron.plugins.common import constants as p_const
 from neutron.plugins.ml2.drivers.zvm import mech_zvm
 from neutron.plugins.zvm.agent import zvm_network
+from neutron.plugins.zvm.common import constants
 from neutron.plugins.zvm.common import exception
 from neutron.plugins.zvm.common import utils
+from neutron.plugins.zvm.common import xcatutils
 
 
 LOG = logging.getLogger(__name__)
@@ -56,6 +60,7 @@ class zvmNeutronAgent(object):
         self._zhcp_node = cfg.CONF.AGENT.xcat_zhcp_nodename
         self._host = cfg.CONF.AGENT.zvm_host or cfg.CONF.host
         self._port_map = {}
+        self._xcat_url = xcatutils.xCatURL()
 
         zvm_net = zvm_network.zvmNetwork()
         self.agent_state = {
@@ -68,6 +73,44 @@ class zvmNeutronAgent(object):
         self._setup_server_rpc()
         self._zhcp_userid = self._utils.get_zhcp_userid(self._zhcp_node)
         self._restart_handler = self._handle_restart()
+
+    def _version_check(self, req_ver=None, op=operator.lt):
+        try:
+            if req_ver is not None:
+                cur = versionutils.convert_version_to_int(self._xcat_version)
+                req = versionutils.convert_version_to_int(req_ver)
+                if op(cur, req):
+                    return False
+            return True
+        except Exception:
+            return False
+
+    def has_min_version(self, req_ver=None):
+        return self._version_check(req_ver=req_ver, op=operator.lt)
+
+    def has_version(self, req_ver=None):
+        return self._version_check(req_ver=req_ver, op=operator.ne)
+
+    def _check_xcat_version(self):
+        # incremental sleep interval list
+        _inc_slp = [5, 10, 20, 30, 60]
+        _slp = 5
+
+        # TODO(jichenjc): update _xcat_version when xcat reboot
+        self._xcat_version = xcatutils.get_xcat_version()
+        version_ok = self.has_min_version(constants.XCAT_MINIMUM_VERSION)
+        while (not version_ok):
+            LOG.warning(_LW("WARNING: the xcat version communicating with is "
+                            "%(xcat_version)s, but the minimum requested "
+                            "version by neutron agent is %(minimum)s "
+                            "will sleep some time and check again"),
+                        {'xcat_version': self._xcat_version,
+                         'minimum': constants.XCAT_MINIMUM_VERSION})
+            self._xcat_version = self._get_xcat_version()
+            version_ok = self.has_min_version(constants.XCAT_MINIMUM_VERSION)
+
+            _slp = len(_inc_slp) != 0 and _inc_slp.pop(0) or _slp
+            time.sleep(_slp)
 
     def _setup_server_rpc(self):
         self.agent_id = 'zvm_agent_%s' % self._zhcp_node
