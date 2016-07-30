@@ -30,7 +30,10 @@ LOG = logging.getLogger(__name__)
 CONF = config.CONF
 
 
-class xCatURL(object):
+_XCAT_URL = None
+
+
+class XCATUrl(object):
     """To return xCat url for invoking xCat REST API."""
 
     def __init__(self):
@@ -321,13 +324,23 @@ def expect_invalid_xcat_resp_data():
 def get_xcat_version():
     """Return the version of xCAT."""
 
-    url = xCatURL().version()
+    url = get_xcat_url().version()
     data = xcat_request('GET', url)['data']
 
     with expect_invalid_xcat_resp_data(data):
         version = data[0][0].split()[1]
         version = version.strip()
         return version
+
+
+def get_xcat_url():
+    global _XCAT_URL
+
+    if _XCAT_URL is not None:
+        return _XCAT_URL
+
+    _XCAT_URL = XCATUrl()
+    return _XCAT_URL
 
 
 def xcat_support_chvm_smcli():

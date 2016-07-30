@@ -30,7 +30,7 @@ class zvmUtils(object):
     _MAX_REGRANT_USER_NUMBER = 1000
 
     def __init__(self):
-        self._xcat_url = xcatutils.xCatURL()
+        self._xcat_url = xcatutils.get_xcat_url()
         self._zhcp_userid = None
         self._userid_map = {}
         self._xcat_node_name = self._get_xcat_node_name()

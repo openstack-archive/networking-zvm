@@ -39,7 +39,7 @@ class TestZVMXcatUtils(base.BaseTestCase):
                               'dummy', group='AGENT')
         cfg.CONF.set_override('zvm_xcat_timeout',
                               self._FAKE_XCAT_TIMEOUT, 'AGENT')
-        self._xcaturl = xcatutils.xCatURL()
+        self._xcaturl = xcatutils.XCATUrl()
         with mock.patch.multiple(xcatutils.httplib,
             HTTPSConnection=mock.MagicMock()):
             self._zvm_xcat_connection = xcatutils.xCatConnection()
