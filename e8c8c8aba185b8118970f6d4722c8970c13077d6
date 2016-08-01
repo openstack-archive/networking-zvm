@@ -1,0 +1,8 @@
+Workflow+1: songqianxia <xqianxia@cn.ibm.com>
+Code-Review+2: songqianxia <xqianxia@cn.ibm.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 01 Aug 2016 02:18:23 +0000
+Reviewed-on: https://review.openstack.org/348735
+Project: openstack/networking-zvm
+Branch: refs/heads/stable/liberty
