@@ -14,12 +14,14 @@
 
 import contextlib
 import functools
+import os
+import socket
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from six.moves import http_client as httplib
-
-from neutron._i18n import _LE
+import ssl
+from neutron._i18n import _LE, _LW
 from neutron.plugins.zvm.common import config
 from neutron.plugins.zvm.common import constants
 from neutron.plugins.zvm.common import exception
@@ -71,15 +73,57 @@ class xCatURL(object):
         return self.PREFIX + self.VERSION + self.SUFFIX
 
 
+class HTTPSClientAuthConnection(httplib.HTTPSConnection):
+    """For https://wiki.openstack.org/wiki/OSSN/OSSN-0033."""
+
+    def __init__(self, host, port, ca_file, timeout=None, key_file=None,
+                 cert_file=None):
+        httplib.HTTPSConnection.__init__(self, host, port,
+                                         key_file=key_file,
+                                         cert_file=cert_file)
+        self.key_file = key_file
+        self.cert_file = cert_file
+        self.ca_file = ca_file
+        self.timeout = timeout
+        self.use_ca = True
+
+        if self.ca_file is None:
+            LOG.debug("no xCAT CA file specified, this is considered "
+                      "not secure")
+            self.use_ca = False
+
+    def connect(self):
+        sock = socket.create_connection((self.host, self.port), self.timeout)
+        if self._tunnel_host:
+            self.sock = sock
+            self._tunnel()
+
+        if (self.ca_file is not None and
+            not os.path.exists(self.ca_file)):
+            LOG.warning(_LW("the CA file %(ca_file) does not exist!"),
+                        {'ca_file': self.ca_file})
+            self.use_ca = False
+
+        if not self.use_ca:
+            self.sock = ssl.wrap_socket(sock, self.key_file, self.cert_file,
+                                        cert_reqs=ssl.CERT_NONE)
+        else:
+            self.sock = ssl.wrap_socket(sock, self.key_file, self.cert_file,
+                                        ca_certs=self.ca_file,
+                                        cert_reqs=ssl.CERT_REQUIRED)
+
+
 class xCatConnection():
     """Https requests to xCat web service."""
     def __init__(self):
         """Initialize https connection to xCat service."""
         self.host = CONF.AGENT.zvm_xcat_server
+        self.port = 443
         self.xcat_timeout = CONF.AGENT.zvm_xcat_timeout
         try:
-            self.conn = httplib.HTTPSConnection(self.host, None, None, None,
-                                                True, self.xcat_timeout)
+            self.conn = HTTPSClientAuthConnection(self.host, self.port,
+                                                CONF.AGENT.zvm_xcat_ca_file,
+                                                timeout=self.xcat_timeout)
         except Exception:
             LOG.error(_LE("Connect to xCat server %s failed") % self.host)
             raise exception.zVMxCatConnectionFailed(xcatserver=self.host)

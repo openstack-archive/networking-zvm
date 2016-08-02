@@ -52,6 +52,20 @@ agent_opts = [
         default=300,
         help=_("The number of seconds the agent will wait for "
         "xCAT MN response")),
+    cfg.IntOpt(
+        'zvm_xcat_ca_file',
+        default=None,
+        help=_("""
+CA file for https connection to xcat.
+
+When https is used to communicate between zvm driver and xcat,
+zvm driver need to have a CA file so that certificates will
+be used to verify xcat is the one zvm plugin to connect to.
+see https://bugs.launchpad.net/ossn/+bug/1188189 for additional info.
+
+Possible values:
+    A file location in the host that running compute service.
+""")),
     cfg.StrOpt(
         'xcat_mgt_ip',
         default=None,
