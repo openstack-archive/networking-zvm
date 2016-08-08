@@ -55,6 +55,7 @@ class zvmNeutronAgent(object):
         self._polling_interval = cfg.CONF.AGENT.polling_interval
         self._zhcp_node = cfg.CONF.AGENT.xcat_zhcp_nodename
         self._host = cfg.CONF.AGENT.zvm_host or cfg.CONF.host
+        self._port_map = {}
 
         zvm_net = zvm_network.zvmNetwork()
         self.agent_state = {
@@ -103,7 +104,7 @@ class zvmNeutronAgent(object):
         port = kwargs.get('port')
         LOG.debug("Port update received. UUID: %s", port)
 
-        if not port['id'] in self._port_map.keys():
+        if not self._port_map or not port['id'] in self._port_map.keys():
             # update a port which is not coupled to any NIC, nothing
             # to do for a user based vswitch
             return
@@ -250,7 +251,7 @@ class zvmNeutronAgent(object):
         for device in devices:
             LOG.info(_LI("Removing port %s"), device)
             try:
-                if device not in self._port_map:
+                if not self._port_map or device not in self._port_map:
                     LOG.warning(_LW("Can't find port %s in zvm agent"), device)
                     continue
 
