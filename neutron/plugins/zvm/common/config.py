@@ -32,11 +32,11 @@ agent_opts = [
                "will take effect")),
     cfg.StrOpt(
         'zvm_xcat_username',
-        default='admin',
+        default=None,
         help=_('xCat REST API username')),
     cfg.StrOpt(
         'zvm_xcat_password',
-        default='admin',
+        default=None,
         secret=True,
         help=_('Password of the xCat REST API user')),
     cfg.StrOpt(
