@@ -1,0 +1,8 @@
+Code-Review+2: songqianxia <xqianxia@cn.ibm.com>
+Workflow+1: songqianxia <xqianxia@cn.ibm.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 16 Aug 2016 08:02:46 +0000
+Reviewed-on: https://review.openstack.org/337079
+Project: openstack/networking-zvm
+Branch: refs/heads/master
