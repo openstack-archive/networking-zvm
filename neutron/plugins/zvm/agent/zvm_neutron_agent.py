@@ -23,10 +23,10 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_service import loopingcall
 from oslo_utils import versionutils
+from neutron_lib import constants as q_const
 
 from neutron.agent import rpc as agent_rpc
 from neutron.common import config as common_config
-from neutron.common import constants as q_const
 from neutron.common import topics
 from neutron._i18n import _, _LE, _LI, _LW
 from neutron import context
