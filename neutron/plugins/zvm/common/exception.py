@@ -12,9 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from neutron_lib import exceptions as exception
+
 
 from neutron._i18n import _
-from neutron.common import exceptions as exception
 
 
 class zvmException(exception.NeutronException):
