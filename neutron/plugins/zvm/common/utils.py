@@ -513,22 +513,23 @@ class zvmUtils(object):
             ret_str = xcatutils.xcat_request("PUT", url, body)['data'][0][0]
         return ret_str.split('\n')[4].split(': ', 3)[2]
 
-    def add_nic_to_user_direct(self, nodename, nic_info):
+    def add_nic_to_user_direct(self, nodename, nic_info, zhcp):
         """add one NIC's info to user direct."""
         vdev = self._get_nic_settings(nic_info['port_id'], "interface")
 
-        url = self._xcat_url.chvm('/' + nodename)
-        command = 'Image_Definition_Update_DM -T %userid%'
-        command += ' -k \'NICDEF=VDEV=%s TYPE=QDIO ' % vdev
-        command += 'MACID=%s ' % nic_info['mac']
-        command += 'LAN=SYSTEM '
-        command += 'SWITCHNAME=%s\'' % nic_info['vswitch']
-        body = ['--smcli', command]
+        url = self._xcat_url.xdsh("/%s" % zhcp)
+        cmd = '/opt/zhcp/bin/smcli Image_Definition_Update_DM -T %s' % nodename
+        cmd += ' -k \'NICDEF=VDEV=%s TYPE=QDIO ' % vdev
+        cmd += 'MACID=%s ' % nic_info['mac']
+        cmd += 'LAN=SYSTEM '
+        cmd += 'SWITCHNAME=%s\'' % nic_info['vswitch']
+        xdsh_commands = 'command=%s' % cmd
+        body = [xdsh_commands]
 
         with xcatutils.expect_invalid_xcat_resp_data():
-            xcatutils.xcat_request("PUT", url, body)
+            xcatutils.xcat_request("PUT", url, body)['data'][0][0]
 
     def add_nics_to_direct(self, zhcp, nodename, nic_info_list):
         """add all NIC's info to user direct."""
         for nic_info in nic_info_list:
-            self.add_nic_to_user_direct(nodename, nic_info)
+            self.add_nic_to_user_direct(nodename, nic_info, zhcp)
