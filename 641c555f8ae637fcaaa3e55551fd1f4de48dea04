@@ -1,0 +1,9 @@
+Code-Review+1: Bob Hansen <hansenb@us.ibm.com>
+Code-Review+2: jichenjc <jichenjc@cn.ibm.com>
+Workflow+1: jichenjc <jichenjc@cn.ibm.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Fri, 11 Nov 2016 07:43:31 +0000
+Reviewed-on: https://review.openstack.org/396376
+Project: openstack/networking-zvm
+Branch: refs/heads/master
