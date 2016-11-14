@@ -1,0 +1,8 @@
+Code-Review+2: jichenjc <jichenjc@cn.ibm.com>
+Workflow+1: jichenjc <jichenjc@cn.ibm.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 14 Nov 2016 12:10:38 +0000
+Reviewed-on: https://review.openstack.org/397069
+Project: openstack/networking-zvm
+Branch: refs/heads/stable/newton
