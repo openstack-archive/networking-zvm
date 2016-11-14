@@ -1,0 +1,8 @@
+Code-Review+2: Huang Rui <bjhuangr@cn.ibm.com>
+Workflow+1: Huang Rui <bjhuangr@cn.ibm.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 14 Nov 2016 11:16:14 +0000
+Reviewed-on: https://review.openstack.org/397104
+Project: openstack/networking-zvm
+Branch: refs/heads/stable/newton
