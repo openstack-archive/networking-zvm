@@ -1,0 +1,8 @@
+Code-Review+2: Huang Shi Lin <shilinh@cn.ibm.com>
+Workflow+1: Huang Shi Lin <shilinh@cn.ibm.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 14 Nov 2016 09:07:09 +0000
+Reviewed-on: https://review.openstack.org/397066
+Project: openstack/networking-zvm
+Branch: refs/heads/master
