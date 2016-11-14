@@ -52,7 +52,7 @@ agent_opts = [
         default=300,
         help=_("The number of seconds the agent will wait for "
         "xCAT MN response")),
-    cfg.IntOpt(
+    cfg.StrOpt(
         'zvm_xcat_ca_file',
         default=None,
         help=_("""
