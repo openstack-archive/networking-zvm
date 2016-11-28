@@ -37,4 +37,4 @@ XCAT_SUPPORT_CHVM_SMCLI_VERSION = '2.8.3.8'
 # This is minimum version of xcat needed, if xcat version is lower than
 # that, some functions will be missing and neutron agent can't start up
 # TODO(jichenjc) clean version check below the minimum version.
-XCAT_MINIMUM_VERSION = '2.8.3.8'
+XCAT_MINIMUM_VERSION = '2.8.3.16'
