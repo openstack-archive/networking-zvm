@@ -15,13 +15,10 @@
 #    under the License.
 
 from neutron_lib.api.definitions import portbindings
-from oslo_log import log
 
 from neutron.plugins.common import constants as p_constants
 from neutron.plugins.ml2.drivers import mech_agent
 
-
-LOG = log.getLogger(__name__)
 
 AGENT_TYPE_ZVM = 'z/VM agent'
 VIF_TYPE_ZVM = 'zvm'
