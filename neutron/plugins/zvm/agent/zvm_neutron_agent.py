@@ -20,6 +20,7 @@ import sys
 import time
 
 from neutron_lib import constants as q_const
+from neutron_lib import context
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_service import loopingcall
@@ -29,7 +30,6 @@ from neutron.agent import rpc as agent_rpc
 from neutron.common import config as common_config
 from neutron.common import topics
 from neutron._i18n import _, _LE, _LI, _LW
-from neutron import context
 from neutron.plugins.common import constants as p_const
 from neutron.plugins.ml2.drivers.zvm import mech_zvm
 from neutron.plugins.zvm.agent import zvm_network
@@ -37,7 +37,6 @@ from neutron.plugins.zvm.common import constants
 from neutron.plugins.zvm.common import exception
 from neutron.plugins.zvm.common import utils
 from neutron.plugins.zvm.common import xcatutils
-
 
 LOG = logging.getLogger(__name__)
 

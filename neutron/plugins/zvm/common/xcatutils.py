@@ -140,7 +140,7 @@ class HTTPSClientAuthConnection(httplib.HTTPSConnection):
                                         cert_reqs=ssl.CERT_REQUIRED)
 
 
-class xCatConnection():
+class xCatConnection(object):
     """Https requests to xCat web service."""
     def __init__(self):
         """Initialize https connection to xCat service."""
