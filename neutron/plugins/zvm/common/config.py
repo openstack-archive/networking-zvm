@@ -17,8 +17,7 @@
 from oslo_config import cfg
 
 from neutron._i18n import _
-from neutron.agent.common import config
-
+from neutron.conf.agent import common as config
 
 agent_opts = [
     cfg.StrOpt(
