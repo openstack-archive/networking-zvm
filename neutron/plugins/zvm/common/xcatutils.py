@@ -16,12 +16,13 @@ import contextlib
 import functools
 import os
 import socket
+import time
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from six.moves import http_client as httplib
 import ssl
-from neutron._i18n import _LE, _LW
+from neutron._i18n import _LE, _LI, _LW
 from neutron.plugins.zvm.common import config
 from neutron.plugins.zvm.common import constants
 from neutron.plugins.zvm.common import exception
@@ -195,15 +196,23 @@ class xCatConnection(object):
 
         LOG.debug("xCAT response: %s" % str(resp))
 
-        # NOTE(rui): Currently, only xCat returns 200 or 201 can be
-        #            considered acceptable.
         err = None
-        if method == "POST":
-            if res.status != 201:
-                err = str(resp)
+        need_retry = 0
+        # Post requests are successful when a 201 Created status is received.
+        # Other requests are successful when a 200 OK status is received.
+        # Requests receiving a 503 busy status can be re-driven by the caller.
+        # The calling routine currently assumes that status code 503 is the
+        # only retryable case. If retry for other status codes, e.g. 500, is
+        # ever added then the caller's trace entries will need to be changed.
+        if res.status != 503:
+            if method == "POST":
+                if res.status != 201:
+                    err = str(resp)
+            else:
+                if res.status != 200:
+                    err = str(resp)
         else:
-            if res.status != 200:
-                err = str(resp)
+            need_retry = 1
 
         if err is not None:
             LOG.error(_LE("Request to xCat server %(host)s failed: %(err)s") %
@@ -211,14 +220,49 @@ class xCatConnection(object):
             raise exception.zVMxCatRequestFailed(xcatserver=self.host,
                                                  err=err)
 
-        return resp
+        return need_retry, resp
 
 
 def xcat_request(method, url, body=None, headers=None):
     headers = headers or {}
     conn = xCatConnection()
-    resp = conn.request(method, url, body, headers)
-    return load_xcat_resp(method, url, body, resp['message'])
+
+    _rep_ptn = ''.join(('&password=', CONF.AGENT.zvm_xcat_password))
+    max_attempts = 5
+    retry_attempts = max_attempts
+    while (retry_attempts > 0):
+        need_retry, resp = conn.request(method, url, body, headers)
+        if not need_retry:
+            ret = load_xcat_resp(method, url, body, resp['message'])
+            # Yes, we finished the request, let's return or handle error
+            return ret
+        LOG.info(_LI("xCAT encounter service handling error (http 503), "
+                     "Attempt %(retry)s of %(max_retry)s "
+                     "request: xCAT-Server: %(xcat_server)s "
+                     "Request-method: %(method)s "
+                     "URL: %(url)s."),
+                 {'retry': max_attempts - retry_attempts + 1,
+                  'max_retry': max_attempts,
+                  'xcat_server': CONF.AGENT.zvm_xcat_server,
+                  'method': method,
+                  'url': url.replace(_rep_ptn, '')})
+        retry_attempts -= 1
+        if retry_attempts > 0:
+            time.sleep(2)
+
+    LOG.warning(_LW("xCAT encounter service handling error (http 503), "
+                    "Retried %(max_retry)s times but still failed. "
+                    "request: xCAT-Server: %(xcat_server)s "
+                    "Request-method: %(method)s "
+                    "URL: %(url)s."),
+                {'max_retry': max_attempts,
+                 'xcat_server': CONF.AGENT.zvm_xcat_server,
+                 'method': method,
+                 'url': url.replace(_rep_ptn, '')})
+    ret = load_xcat_resp(method, url, body, resp['message'])
+
+    # ok, we tried all we can do here, let upper layer handle this error.
+    return ret
 
 
 def jsonloads(jsonstr):

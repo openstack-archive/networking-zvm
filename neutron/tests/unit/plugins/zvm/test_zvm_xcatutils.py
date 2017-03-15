@@ -18,7 +18,9 @@ Unit tests for the z/VM xCAT utils.
 """
 
 import mock
+
 from oslo_config import cfg
+from oslo_serialization import jsonutils
 
 from neutron.plugins.zvm.common import exception
 from neutron.plugins.zvm.common import xcatutils
@@ -68,3 +70,14 @@ class TestZVMXcatUtils(base.BaseTestCase):
         mock_get.return_value = {'data': [ret]}
         version = xcatutils.get_xcat_version()
         self.assertEqual(version, '2.8.3.5')
+
+    @mock.patch.object(xcatutils.LOG, "warning")
+    @mock.patch.object(xcatutils.LOG, "info")
+    @mock.patch.object(xcatutils.xCatConnection, 'request')
+    def test_xcat_request_503(self, mock_req, mock_info, mock_warn):
+        res = {'message': jsonutils.dumps({"data": [{'data': 1}]})}
+        mock_req.return_value = (1, res)
+
+        xcatutils.xcat_request("GET", "/dummy")
+        self.assertEqual(5, len(mock_info.call_args_list))
+        self.assertEqual(1, len(mock_warn.call_args_list))
