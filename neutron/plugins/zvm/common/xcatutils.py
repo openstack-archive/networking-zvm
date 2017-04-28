@@ -22,7 +22,7 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from six.moves import http_client as httplib
 import ssl
-from neutron._i18n import _LE, _LI, _LW
+
 from neutron.plugins.zvm.common import config
 from neutron.plugins.zvm.common import constants
 from neutron.plugins.zvm.common import exception
@@ -128,7 +128,7 @@ class HTTPSClientAuthConnection(httplib.HTTPSConnection):
 
         if (self.ca_file is not None and
             not os.path.exists(self.ca_file)):
-            LOG.warning(_LW("the CA file %(ca_file) does not exist!"),
+            LOG.warning("the CA file %(ca_file) does not exist!",
                         {'ca_file': self.ca_file})
             self.use_ca = False
 
@@ -153,7 +153,7 @@ class xCatConnection(object):
                                                 CONF.AGENT.zvm_xcat_ca_file,
                                                 timeout=self.xcat_timeout)
         except Exception:
-            LOG.error(_LE("Connect to xCat server %s failed") % self.host)
+            LOG.error("Connect to xCat server %s failed" % self.host)
             raise exception.zVMxCatConnectionFailed(xcatserver=self.host)
 
     def request(self, method, url, body=None, headers=None):
@@ -182,7 +182,7 @@ class xCatConnection(object):
         try:
             self.conn.request(method, url, body, headers)
         except Exception as err:
-            LOG.error(_LE("Request to xCat server %(host)s failed: %(err)s") %
+            LOG.error("Request to xCat server %(host)s failed: %(err)s" %
                       {'host': self.host, 'err': err})
             raise exception.zVMxCatRequestFailed(xcatserver=self.host,
                                                  err=err)
@@ -215,7 +215,7 @@ class xCatConnection(object):
             need_retry = 1
 
         if err is not None:
-            LOG.error(_LE("Request to xCat server %(host)s failed: %(err)s") %
+            LOG.error("Request to xCat server %(host)s failed: %(err)s" %
                       {'host': self.host, 'err': err})
             raise exception.zVMxCatRequestFailed(xcatserver=self.host,
                                                  err=err)
@@ -236,11 +236,11 @@ def xcat_request(method, url, body=None, headers=None):
             ret = load_xcat_resp(method, url, body, resp['message'])
             # Yes, we finished the request, let's return or handle error
             return ret
-        LOG.info(_LI("xCAT encounter service handling error (http 503), "
-                     "Attempt %(retry)s of %(max_retry)s "
-                     "request: xCAT-Server: %(xcat_server)s "
-                     "Request-method: %(method)s "
-                     "URL: %(url)s."),
+        LOG.info("xCAT encounter service handling error (http 503), "
+                 "Attempt %(retry)s of %(max_retry)s "
+                 "request: xCAT-Server: %(xcat_server)s "
+                 "Request-method: %(method)s "
+                 "URL: %(url)s.",
                  {'retry': max_attempts - retry_attempts + 1,
                   'max_retry': max_attempts,
                   'xcat_server': CONF.AGENT.zvm_xcat_server,
@@ -250,11 +250,11 @@ def xcat_request(method, url, body=None, headers=None):
         if retry_attempts > 0:
             time.sleep(2)
 
-    LOG.warning(_LW("xCAT encounter service handling error (http 503), "
-                    "Retried %(max_retry)s times but still failed. "
-                    "request: xCAT-Server: %(xcat_server)s "
-                    "Request-method: %(method)s "
-                    "URL: %(url)s."),
+    LOG.warning("xCAT encounter service handling error (http 503), "
+                "Retried %(max_retry)s times but still failed. "
+                "request: xCAT-Server: %(xcat_server)s "
+                "Request-method: %(method)s "
+                "URL: %(url)s.",
                 {'max_retry': max_attempts,
                  'xcat_server': CONF.AGENT.zvm_xcat_server,
                  'method': method,
@@ -269,7 +269,7 @@ def jsonloads(jsonstr):
     try:
         return jsonutils.loads(jsonstr)
     except ValueError:
-        LOG.error(_LE("Respone is not in JSON format"))
+        LOG.error("Respone is not in JSON format")
         raise exception.zVMJsonLoadsError()
 
 
@@ -284,7 +284,7 @@ def wrap_invalid_xcat_resp_data_error(function):
         try:
             return function(*arg, **kwargs)
         except (ValueError, TypeError, IndexError) as err:
-            LOG.error(_LE('Invalid data returned from xCat: %s') % err)
+            LOG.error('Invalid data returned from xCat: %s' % err)
             raise exception.zVMInvalidxCatResponseDataError(msg=err)
         except Exception as err:
             raise
@@ -319,7 +319,7 @@ def load_xcat_resp(method, url, body, message):
                 if d.get(k) is not None:
                     resp[k].append(d.get(k))
     except Exception:
-        LOG.error(_LE("Invalid data returned from xCat: %s") % msg)
+        LOG.error("Invalid data returned from xCat: %s" % msg)
         raise exception.zVMInvalidxCatResponseDataError(msg=msg)
 
     if not verify_xcat_resp(method, resp):
