@@ -17,7 +17,6 @@ import re
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from neutron._i18n import _LI, _LW, _LE
 from neutron.plugins.zvm.common import exception
 from neutron.plugins.zvm.common import xcatutils
 
@@ -219,7 +218,7 @@ class zvmUtils(object):
         '''
         vswitch_info = self._check_vswitch_status(zhcp, name)
         if vswitch_info is not None:
-            LOG.info(_LI('Vswitch %s already exists,check rdev info.'), name)
+            LOG.info('Vswitch %s already exists,check rdev info.', name)
             if rdev is None:
                 LOG.debug('vswitch %s is not changed', name)
                 return
@@ -234,7 +233,7 @@ class zvmUtils(object):
                             LOG.debug('vswitch %s is not changed', name)
                             return
 
-                LOG.info(_LI('start changing vswitch %s '), name)
+                LOG.info('start changing vswitch %s ', name)
                 self._set_vswitch_rdev(zhcp, name, rdev)
                 return
 
@@ -276,7 +275,7 @@ class zvmUtils(object):
             raise exception.zvmException(
                 msg=("switch: %s add failed, %s") %
                     (name, result['data']))
-        LOG.info(_LI('Created vswitch %s done.'), name)
+        LOG.info('Created vswitch %s done.', name)
 
     @xcatutils.wrap_invalid_xcat_resp_data_error
     def _check_vswitch_status(self, zhcp, vsw):
@@ -319,7 +318,7 @@ class zvmUtils(object):
             raise exception.zvmException(
                 msg=("switch: %s changes failed, %s") %
                     (vsw, result['data']))
-        LOG.info(_LI('change vswitch %s done.'), vsw)
+        LOG.info('change vswitch %s done.', vsw)
 
     def re_grant_user(self, zhcp):
         """Grant user again after z/VM is re-IPLed."""
@@ -352,7 +351,7 @@ class zvmUtils(object):
             except ValueError:
                 # just in case there are bad records of vlan info which
                 # could be a string
-                LOG.warning(_LW("Unknown vlan '%(vlan)s' for user %(user)s."),
+                LOG.warning("Unknown vlan '%(vlan)s' for user %(user)s.",
                             {'vlan': port['vlan_id'], 'user': port['userid']})
                 cmd += '\n'
                 continue
@@ -366,7 +365,7 @@ class zvmUtils(object):
                     records_num = 0
                     cmd = ''
                 except Exception:
-                    LOG.warning(_LW("Grant user failed"))
+                    LOG.warning("Grant user failed")
 
         if len(cmd) > 0:
             commands = 'echo -e "#!/bin/sh\n%s" > grant.sh' % cmd[:-1]
@@ -413,7 +412,7 @@ class zvmUtils(object):
             try:
                 ports[port_id]['userid'] = users[port['nodename']]['userid']
             except Exception:
-                LOG.info(_LI("Garbage port found. port id: %s") % port_id)
+                LOG.info("Garbage port found. port id: %s" % port_id)
 
         return ports
 
@@ -453,8 +452,8 @@ class zvmUtils(object):
                 cur_mask = re.findall('netmask (.*)  broadcast',
                                    result['data'][0][0])
                 if not cur_ip:
-                    LOG.warning(_LW("Nic 800 has been created, but IP "
-                          "address is not correct, will config it again"))
+                    LOG.warning("Nic 800 has been created, but IP "
+                          "address is not correct, will config it again")
                 elif mgt_ip != cur_ip[0]:
                     raise exception.zVMConfigException(
                         msg=("Only support one Management network,"
@@ -465,12 +464,12 @@ class zvmUtils(object):
                     LOG.debug("IP address has been assigned for NIC 800.")
                     return
             else:
-                LOG.warning(_LW("Nic 800 has been created, but IP address "
-                              "doesn't exist, will config it again"))
+                LOG.warning("Nic 800 has been created, but IP address "
+                              "doesn't exist, will config it again")
         else:
             message = ("Command 'query v nic' return %s,"
                     " it is unkown information for zvm-agent") % result
-            LOG.error(_LE("Error: %s") % message)
+            LOG.error("Error: %s" % message)
             raise exception.zvmException(msg=message)
 
         url = self._xcat_url.xdsh("/%s") % self._xcat_node_name

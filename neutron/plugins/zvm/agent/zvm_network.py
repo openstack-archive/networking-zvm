@@ -17,7 +17,6 @@
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from neutron._i18n import _LI
 from neutron.plugins.common import utils as plugin_utils
 from neutron.plugins.zvm.common import utils
 
@@ -59,8 +58,8 @@ class zvmNetwork(object):
         for vsw in self._maps.keys():
             CONF.register_opts(vswitch_opts, vsw)
             if vsw.upper() in admin_vsw:
-                LOG.info(_LI('Vswitch %s is pre-created by admin or system, '
-                    'neutron-zvm-agent will not handle it') % vsw)
+                LOG.info('Vswitch %s is pre-created by admin or system, '
+                    'neutron-zvm-agent will not handle it' % vsw)
             else:
                 self._vsws.append(zvmVswitch(self._zhcp, vsw, self._maps[vsw]))
 

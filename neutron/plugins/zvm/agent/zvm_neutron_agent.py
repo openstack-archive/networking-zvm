@@ -29,7 +29,7 @@ from oslo_utils import versionutils
 from neutron.agent import rpc as agent_rpc
 from neutron.common import config as common_config
 from neutron.common import topics
-from neutron._i18n import _, _LE, _LI, _LW
+from neutron._i18n import _
 from neutron.plugins.common import constants as p_const
 from neutron.plugins.ml2.drivers.zvm import mech_zvm
 from neutron.plugins.zvm.agent import zvm_network
@@ -99,10 +99,10 @@ class zvmNeutronAgent(object):
         self._xcat_version = xcatutils.get_xcat_version()
         version_ok = self.has_min_version(constants.XCAT_MINIMUM_VERSION)
         while (not version_ok):
-            LOG.warning(_LW("WARNING: the xcat version communicating with is "
-                            "%(xcat_version)s, but the minimum requested "
-                            "version by neutron agent is %(minimum)s "
-                            "will sleep some time and check again"),
+            LOG.warning("WARNING: the xcat version communicating with is "
+                        "%(xcat_version)s, but the minimum requested "
+                        "version by neutron agent is %(minimum)s "
+                        "will sleep some time and check again",
                         {'xcat_version': self._xcat_version,
                          'minimum': constants.XCAT_MINIMUM_VERSION})
             self._xcat_version = self._get_xcat_version()
@@ -137,10 +137,10 @@ class zvmNeutronAgent(object):
             self.state_rpc.report_state(self.context, self.agent_state)
             self.agent_state.pop('start_flag', None)
         except Exception:
-            LOG.exception(_LE("Failed reporting state!"))
+            LOG.exception("Failed reporting state!")
 
     def network_delete(self, context, network_id=None):
-        LOG.info(_LI("Network delete received. UUID: %s"), network_id)
+        LOG.info("Network delete received. UUID: %s", network_id)
 
     def port_update(self, context, **kwargs):
         port = kwargs.get('port')
@@ -168,10 +168,10 @@ class zvmNeutronAgent(object):
 
     def port_bound(self, port_id, net_uuid,
                    network_type, physical_network, segmentation_id, userid):
-        LOG.info(_LI("Start to bind port port_id:%(port_id)s, "
-                     "net_uuid:%(net_uuid)s, network_type: %(network_type)s, "
-                     "physical_network: %(physical_network)s, "
-                     "userid: %(userid)s, segmentation_id:%(seg_id)s"),
+        LOG.info("Start to bind port port_id:%(port_id)s, "
+                 "net_uuid:%(net_uuid)s, network_type: %(network_type)s, "
+                 "physical_network: %(physical_network)s, "
+                 "userid: %(userid)s, segmentation_id:%(seg_id)s",
                  {'port_id': port_id, 'net_uuid': net_uuid,
                   'network_type': network_type,
                   'physical_network': physical_network,
@@ -180,18 +180,18 @@ class zvmNeutronAgent(object):
 
         self._utils.grant_user(self._zhcp_node, physical_network, userid)
         if network_type == p_const.TYPE_VLAN:
-            LOG.info(_LI('Binding VLAN, VLAN ID: %(segmentation_id)s, '
-                         'port_id: %(port_id)s'),
+            LOG.info('Binding VLAN, VLAN ID: %(segmentation_id)s, '
+                     'port_id: %(port_id)s',
                      {'segmentation_id': segmentation_id,
                       'port_id': port_id})
             self._utils.set_vswitch_port_vlan_id(segmentation_id, port_id,
                                                  self._zhcp_node,
                                                  physical_network)
         else:
-            LOG.info(_LI('Bind %s port done'), port_id)
+            LOG.info('Bind %s port done', port_id)
 
     def port_unbound(self, port_id):
-        LOG.info(_LI("Unbinding port %s"), port_id)
+        LOG.info("Unbinding port %s", port_id)
         # uncouple is not necessary, because revoke user will uncouple it
         # automatically.
         self._utils.revoke_user(self._zhcp_node,
@@ -219,7 +219,7 @@ class zvmNeutronAgent(object):
                         admin_state_up):
         node = self._utils.get_node_from_port(port_id)
         userid = self._utils.get_userid_from_node(node)
-        LOG.info(_LI("Update port for node:%s") % node)
+        LOG.info("Update port for node:%s" % node)
         if admin_state_up:
             self.port_bound(port_id, network_id, network_type,
                             physical_network, segmentation_id,
@@ -231,19 +231,19 @@ class zvmNeutronAgent(object):
     def _treat_devices_added(self, devices):
         nics_info = {}
         for device in devices:
-            LOG.info(_LI("Adding port %s") % device)
+            LOG.info("Adding port %s" % device)
             try:
                 details = self.plugin_rpc.get_device_details(self.context,
                                                              device,
                                                              self.agent_id)
             except Exception:
-                LOG.info(_LI("Unable to get port details for %s:"), device)
+                LOG.info("Unable to get port details for %s:", device)
                 continue
 
             try:
                 if 'port_id' in details:
-                    LOG.info(_LI("Port %(device)s updated. "
-                               "Details: %(details)s"),
+                    LOG.info("Port %(device)s updated. "
+                             "Details: %(details)s",
                              {'device': device, 'details': details})
                     (node, userid) = self._treat_vif_port(
                                      details['port_id'],
@@ -266,7 +266,7 @@ class zvmNeutronAgent(object):
                                      details['physical_network'],
                                      details['segmentation_id'])
                     if details.get('admin_state_up'):
-                        LOG.info(_LI("Setting status for %s to UP"), device)
+                        LOG.info("Setting status for %s to UP", device)
                         self.plugin_rpc.update_device_up(
                             self.context, device, self.agent_id, self._host)
                         mac = ''.join(details['mac_address'].split(':'))[6:]
@@ -278,18 +278,18 @@ class zvmNeutronAgent(object):
                                     'mac': mac})
                         LOG.debug("New added NIC info: %s", nics_info[node])
                     else:
-                        LOG.info(_LI("Setting status for %s to DOWN"), device)
+                        LOG.info("Setting status for %s to DOWN", device)
                         self.plugin_rpc.update_device_down(
                             self.context, device, self.agent_id, self._host)
 
                 else:
-                    LOG.warning(_LW("Device %(device)s not defined on "
-                                    "Neutron server, The output detail is "
-                                    "%(details)s"),
+                    LOG.warning("Device %(device)s not defined on "
+                                "Neutron server, The output detail is "
+                                "%(details)s",
                                 {'device': device, 'details': details})
                     continue
             except Exception as e:
-                LOG.exception(_LE("Can not add device %(device)s: %(msg)s"),
+                LOG.exception("Can not add device %(device)s: %(msg)s",
                               {'device': device, 'msg': e})
                 continue
 
@@ -300,10 +300,10 @@ class zvmNeutronAgent(object):
 
     def _treat_devices_removed(self, devices):
         for device in devices:
-            LOG.info(_LI("Removing port %s"), device)
+            LOG.info("Removing port %s", device)
             try:
                 if not self._port_map or device not in self._port_map:
-                    LOG.warning(_LW("Can't find port %s in zvm agent"), device)
+                    LOG.warning("Can't find port %s in zvm agent", device)
                     continue
 
                 if self._port_map[device]['vswitch']:
@@ -313,7 +313,7 @@ class zvmNeutronAgent(object):
                                                    self.agent_id)
                 del self._port_map[device]
             except Exception as e:
-                LOG.exception(_LE("Removing port failed %(device)s: %(msg)s"),
+                LOG.exception("Removing port failed %(device)s: %(msg)s",
                               {'device': device, 'msg': e})
                 continue
 
@@ -343,14 +343,14 @@ class zvmNeutronAgent(object):
                     connect = True
 
                 if port_info:
-                    LOG.info(_LI("Devices change, info: %s"), port_info)
+                    LOG.info("Devices change, info: %s", port_info)
                     self._process_network_ports(port_info)
                     ports = port_info['current']
             except exception.zVMxCatRequestFailed as e:
-                LOG.error(_LE("Lost connection to xCAT. %s"), e)
+                LOG.error("Lost connection to xCAT. %s", e)
                 connect = False
             except Exception as e:
-                LOG.exception(_LE("error in xCAT DB query loop: %s"), e)
+                LOG.exception("error in xCAT DB query loop: %s", e)
 
             # sleep till end of polling interval
             elapsed = (time.time() - start_time)
@@ -372,8 +372,8 @@ class zvmNeutronAgent(object):
 
         if (cfg.CONF.AGENT.xcat_mgt_ip is None or
                 cfg.CONF.AGENT.xcat_mgt_mask is None):
-            LOG.info(_LI("User does not configure management IP. Don't need to"
-                       " initialize xCAT management network."))
+            LOG.info("User does not configure management IP. Don't need to "
+                     "initialize xCAT management network.")
             return
         if not len(cfg.CONF.ml2_type_flat.flat_networks):
             raise exception.zVMConfigException(
@@ -388,7 +388,7 @@ class zvmNeutronAgent(object):
     def _handle_restart(self):
         xcat_uptime, zvm_uptime = (None, None)
         while True:
-            LOG.info(_LI("Try to reinitialize network ... "))
+            LOG.info("Try to reinitialize network ... ")
             try:
                 tmp_new_time = self._utils.query_xcat_uptime()
                 if xcat_uptime != tmp_new_time:
@@ -403,8 +403,8 @@ class zvmNeutronAgent(object):
             except exception.zVMConfigException:
                 raise
             except Exception:
-                LOG.error(_LE("Failed to handle restart,"
-                            "try again in 5 seconds"))
+                LOG.error("Failed to handle restart,"
+                          "try again in 5 seconds")
                 time.sleep(5)
 
 
@@ -417,6 +417,6 @@ def main():
     agent = zvmNeutronAgent()
 
     # Start to query xCAT DB
-    LOG.info(_LI("z/VM agent initialized, now running... "))
+    LOG.info("z/VM agent initialized, now running... ")
     agent.xcatdb_daemon_loop()
     sys.exit(0)
