@@ -50,7 +50,13 @@ Using the agent
 .. toctree::
    :maxdepth: 2
 
-   install
+Sample configurations
+=====================
+
+.. toctree::
+   :maxdepth: 2
+
+   singleflat
 
 Links
 =====
