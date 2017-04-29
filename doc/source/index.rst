@@ -57,6 +57,7 @@ Sample configurations
    :maxdepth: 2
 
    singleflat
+   singlevlan
 
 Links
 =====
