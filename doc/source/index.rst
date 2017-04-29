@@ -58,6 +58,7 @@ Sample configurations
 
    singleflat
    singlevlan
+   advanced
 
 Links
 =====
