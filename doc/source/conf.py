@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # networking-zvm documentation build configuration file, created by
 # sphinx-quickstart on Tue Apr 14 15:27:57 2015.
