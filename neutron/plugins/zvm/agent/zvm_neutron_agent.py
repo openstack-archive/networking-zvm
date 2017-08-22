@@ -21,7 +21,6 @@ import time
 
 from neutron_lib import constants as q_const
 from neutron_lib import context
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_service import loopingcall
 from oslo_utils import versionutils
@@ -33,12 +32,16 @@ from neutron.common import topics
 from neutron.plugins.common import constants as p_const
 from neutron.plugins.ml2.drivers.zvm import mech_zvm
 from neutron.plugins.zvm.agent import zvm_network
+from neutron.plugins.zvm.common import config as cfg
 from neutron.plugins.zvm.common import constants
 from neutron.plugins.zvm.common import exception
 from neutron.plugins.zvm.common import utils
-from neutron.plugins.zvm.common import xcatutils
+from zvmsdk import api as sdkapi
+from zvmsdk import exception as sdkexception
+from zvmsdk import utils as zvmutils
 
 LOG = logging.getLogger(__name__)
+CONF = cfg.CONF
 
 
 def restart_wrapper(func):
@@ -54,12 +57,13 @@ class zvmNeutronAgent(object):
 
     def __init__(self):
         super(zvmNeutronAgent, self).__init__()
+        self._sdk_api = sdkapi.SDKAPI()
         self._utils = utils.zvmUtils()
-        self._polling_interval = cfg.CONF.AGENT.polling_interval
-        self._zhcp_node = cfg.CONF.AGENT.xcat_zhcp_nodename
-        self._host = cfg.CONF.AGENT.zvm_host or cfg.CONF.host
+        self._polling_interval = CONF.AGENT.polling_interval
+        self._zhcp_node = zvmutils.get_zhcp_node()
+        self._host = self._sdk_api.host_get_info().get(
+                                    'zvm_host') or CONF.host
         self._port_map = {}
-        self._xcat_url = xcatutils.xCatURL()
 
         zvm_net = zvm_network.zvmNetwork()
         self.agent_state = {
@@ -70,7 +74,6 @@ class zvmNeutronAgent(object):
             'agent_type': mech_zvm.AGENT_TYPE_ZVM,
             'start_flag': True}
         self._setup_server_rpc()
-        self._zhcp_userid = self._utils.get_zhcp_userid(self._zhcp_node)
         self._restart_handler = self._handle_restart()
 
     def _version_check(self, req_ver=None, op=operator.lt):
@@ -96,7 +99,7 @@ class zvmNeutronAgent(object):
         _slp = 5
 
         # TODO(jichenjc): update _xcat_version when xcat reboot
-        self._xcat_version = xcatutils.get_xcat_version()
+        self._xcat_version = zvmutils.get_xcat_version()
         version_ok = self.has_min_version(constants.XCAT_MINIMUM_VERSION)
         while (not version_ok):
             LOG.warning("WARNING: the xcat version communicating with is "
@@ -112,7 +115,7 @@ class zvmNeutronAgent(object):
             time.sleep(_slp)
 
     def _setup_server_rpc(self):
-        self.agent_id = 'zvm_agent_%s' % self._zhcp_node
+        self.agent_id = 'zvm_agent_%s' % self._host
         self.topic = topics.AGENT
         self.plugin_rpc = agent_rpc.PluginApi(topics.PLUGIN)
         self.state_rpc = agent_rpc.PluginReportStateAPI(topics.PLUGIN)
@@ -126,7 +129,7 @@ class zvmNeutronAgent(object):
                                                      self.topic,
                                                      consumers)
 
-        report_interval = cfg.CONF.AGENT.report_interval
+        report_interval = CONF.AGENT.report_interval
         if report_interval:
             heartbeat = loopingcall.FixedIntervalLoopingCall(
                 self._report_state)
@@ -154,17 +157,23 @@ class zvmNeutronAgent(object):
         vswitch = self._port_map[port['id']]['vswitch']
         userid = self._port_map[port['id']]['userid']
         if port['admin_state_up']:
-            self._utils.couple_nic_to_vswitch(vswitch, port['id'],
-                                             self._zhcp_node, userid)
+            vdev = self._utils.get_nic_settings(port['id'], "interface")
+            if not vdev:
+                raise exception.zVMInvalidDataError(msg=('Cannot get vdev '
+                                'for user %s, couple to port %s') %
+                                (userid, port['id']))
+            self._sdk_api.guest_nic_couple_to_vswitch(userid, vdev, vswitch)
             self.plugin_rpc.update_device_up(self.context, port['id'],
                                              self.agent_id)
         else:
-            self._utils.uncouple_nic_from_vswitch(vswitch, port['id'],
-                                                self._zhcp_node, userid)
+            vdev = self._utils.get_nic_settings(port['id'], "interface")
+            if not vdev:
+                raise exception.zVMInvalidDataError(msg=('Cannot get vdev '
+                                'for user %s, uncouple port %s') %
+                                (userid, port['id']))
+            self._sdk_api.guest_nic_uncouple_from_vswitch(userid, vdev)
             self.plugin_rpc.update_device_down(self.context, port['id'],
                                                self.agent_id)
-        self._utils.put_user_direct_online(self._zhcp_node,
-                                           self._zhcp_userid)
 
     def port_bound(self, port_id, net_uuid,
                    network_type, physical_network, segmentation_id, userid):
@@ -178,15 +187,15 @@ class zvmNeutronAgent(object):
                   'seg_id': segmentation_id,
                   'userid': userid})
 
-        self._utils.grant_user(self._zhcp_node, physical_network, userid)
+        self._sdk_api.vswitch_grant_user(physical_network, userid)
         if network_type == p_const.TYPE_VLAN:
             LOG.info('Binding VLAN, VLAN ID: %(segmentation_id)s, '
                      'port_id: %(port_id)s',
                      {'segmentation_id': segmentation_id,
                       'port_id': port_id})
-            self._utils.set_vswitch_port_vlan_id(segmentation_id, port_id,
-                                                 self._zhcp_node,
-                                                 physical_network)
+            self._sdk_api.vswitch_set_vlan_id_for_user(physical_network,
+                                                       userid,
+                                                       int(segmentation_id))
         else:
             LOG.info('Bind %s port done', port_id)
 
@@ -194,7 +203,7 @@ class zvmNeutronAgent(object):
         LOG.info("Unbinding port %s", port_id)
         # uncouple is not necessary, because revoke user will uncouple it
         # automatically.
-        self._utils.revoke_user(self._zhcp_node,
+        self._sdk_api.vswitch_revoke_user(
                                 self._port_map[port_id]['vswitch'],
                                 self._port_map[port_id]['userid'])
 
@@ -225,7 +234,7 @@ class zvmNeutronAgent(object):
                             physical_network, segmentation_id,
                             userid)
         else:
-            self._utils.grant_user(self._zhcp_node, physical_network, userid)
+            self._sdk_api.vswitch_grant_user(physical_network, userid)
         return (node, userid)
 
     def _treat_devices_added(self, devices):
@@ -261,10 +270,6 @@ class zvmNeutronAgent(object):
                     self._port_map[device]['vlan_id'] = details[
                                                         'segmentation_id']
 
-                    # no rollback if this fails
-                    self._utils.update_xcat_switch(details['port_id'],
-                                     details['physical_network'],
-                                     details['segmentation_id'])
                     if details.get('admin_state_up'):
                         LOG.info("Setting status for %s to UP", device)
                         self.plugin_rpc.update_device_up(
@@ -276,6 +281,14 @@ class zvmNeutronAgent(object):
                                     {'port_id': details['port_id'],
                                     'vswitch': details['physical_network'],
                                     'mac': mac})
+
+                        LOG.debug("Adding NICs for %(node)s, info: %(nic)s",
+                                  {'node': node, 'nic': nics_info[node]})
+                        vdev = self._utils.get_nic_settings(
+                                            details['port_id'], "interface")
+                        self._sdk_api.guest_nic_couple_to_vswitch(node, vdev,
+                                                details['physical_network'])
+
                         LOG.debug("New added NIC info: %s", nics_info[node])
                     else:
                         LOG.info("Setting status for %s to DOWN", device)
@@ -292,11 +305,6 @@ class zvmNeutronAgent(object):
                 LOG.exception("Can not add device %(device)s: %(msg)s",
                               {'device': device, 'msg': e})
                 continue
-
-        for node, nic_list in nics_info.items():
-            LOG.debug("Adding NICs for %(node)s, info: %(nic)s",
-                      {'node': node, 'nic': nic_list})
-            self._utils.add_nics_to_direct(self._zhcp_node, node, nic_list)
 
     def _treat_devices_removed(self, devices):
         for device in devices:
@@ -364,25 +372,23 @@ class zvmNeutronAgent(object):
     def _init_xcat_mgt(self):
         '''xCAT Management Node(MN) use the first flat network to manage all
         the instances. So a flat network is required.
-        To talk to xCAT MN, xCAT MN requires every instance has a NIC which is
-        in the same subnet as xCAT. The xCAT MN's IP address is xcat_mgt_ip,
-        mask is xcat_mgt_mask in the config file,
-        by default neutron_zvm_plugin.ini.
         '''
 
-        if (cfg.CONF.AGENT.xcat_mgt_ip is None or
-                cfg.CONF.AGENT.xcat_mgt_mask is None):
-            LOG.info("User does not configure management IP. Don't need to "
-                     "initialize xCAT management network.")
-            return
-        if not len(cfg.CONF.ml2_type_flat.flat_networks):
+        if not len(CONF.ml2_type_flat.flat_networks):
             raise exception.zVMConfigException(
                         msg=_('Can not find xCAT management network,'
                               'a flat network is required by xCAT.'))
-        self._utils.create_xcat_mgt_network(self._zhcp_node,
-                            cfg.CONF.AGENT.xcat_mgt_ip,
-                            cfg.CONF.AGENT.xcat_mgt_mask,
-                            cfg.CONF.ml2_type_flat.flat_networks[0])
+
+        try:
+            zvmutils.create_xcat_mgt_network(
+                            CONF.ml2_type_flat.flat_networks[0])
+        except sdkexception.zVMConfigException as err:
+            emsg = err.format_message()
+            raise exception.zVMConfigException(msg=emsg)
+        except Exception as err:
+            LOG.error("Failed to create xCAT management network: %s" %
+                      err.format_message())
+            raise err
 
     @restart_wrapper
     def _handle_restart(self):
@@ -395,7 +401,7 @@ class zvmNeutronAgent(object):
                     self._init_xcat_mgt()
                     xcat_uptime = tmp_new_time
 
-                tmp_new_time = self._utils.query_zvm_uptime(self._zhcp_node)
+                tmp_new_time = self._sdk_api.host_get_info().get('ipl_time')
                 if zvm_uptime != tmp_new_time:
                     self._port_map = self._utils.re_grant_user(self._zhcp_node)
                     zvm_uptime = tmp_new_time
@@ -410,7 +416,7 @@ class zvmNeutronAgent(object):
 
 def main():
     eventlet.monkey_patch()
-    cfg.CONF(project='neutron')
+    CONF(project='neutron')
     common_config.init(sys.argv[1:])
     common_config.setup_logging()
 

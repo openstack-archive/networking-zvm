@@ -18,7 +18,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 
 from neutron.plugins.common import utils as plugin_utils
-from neutron.plugins.zvm.common import utils
+from zvmsdk import api as sdkapi
 
 LOG = logging.getLogger(__name__)
 
@@ -34,23 +34,27 @@ CONF.import_opt('network_vlan_ranges', "neutron.plugins.ml2.drivers.type_vlan",
 
 
 class zvmVswitch(object):
-    def __init__(self, zhcp, name, vlan):
-        self._utils = utils.zvmUtils()
-        self._utils.add_vswitch(zhcp, name,
-                getattr(CONF.get(name), "rdev_list"), vid=vlan)
-        self.zhcp = zhcp
+    def __init__(self, name, vlan):
+        self._sdk_api = sdkapi.SDKAPI()
+        # check vlan set
+        if not len(vlan):
+            vlan = 'UNAWARE'
+        else:
+            vlan = str(vlan[0][0])
+        self._sdk_api.vswitch_create(name,
+                                     rdev=getattr(CONF.get(name), "rdev_list"),
+                                     vid=vlan, network_type='ETHERNET')
 
 
 class zvmNetwork(object):
     def __init__(self):
-        self._utils = utils.zvmUtils()
-        self._zhcp = CONF.AGENT.xcat_zhcp_nodename
+        self._sdk_api = sdkapi.SDKAPI()
         self._vsws = []
         self._maps = {}
         self._creat_networks()
 
     def _creat_networks(self):
-        admin_vsw = self._utils.get_admin_created_vsw(self._zhcp)
+        admin_vsw = self._sdk_api.vswitch_get_list()
         self._maps = plugin_utils.parse_network_vlan_ranges(
                             CONF.ml2_type_vlan.network_vlan_ranges +
                             CONF.ml2_type_flat.flat_networks)
@@ -61,7 +65,7 @@ class zvmNetwork(object):
                 LOG.info('Vswitch %s is pre-created by admin or system, '
                     'neutron-zvm-agent will not handle it' % vsw)
             else:
-                self._vsws.append(zvmVswitch(self._zhcp, vsw, self._maps[vsw]))
+                self._vsws.append(zvmVswitch(vsw, self._maps[vsw]))
 
     def get_network_maps(self):
         return self._maps

@@ -40,7 +40,7 @@ class TestZVMNetwork(base.BaseTestCase):
         cfg.CONF.set_override('network_vlan_ranges', VLAN_NETWORKS,
                               group='ml2_type_vlan')
 
-        with mock.patch('neutron.plugins.zvm.common.utils.zvmUtils'):
+        with mock.patch('zvmsdk.api.SDKAPI'):
             self._zvm_network = zvm_network.zvmNetwork()
 
     def test_get_network_maps(self):

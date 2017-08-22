@@ -23,7 +23,6 @@ from neutron.plugins.zvm.agent import zvm_neutron_agent
 from neutron.plugins.zvm.common import exception
 from neutron.tests import base
 
-
 FLAT_NETWORKS = ['flat_net1']
 VLAN_NETWORKS = ['vlan_net1:100:500']
 NET_UUID = 'zvm-net-uuid'
@@ -42,6 +41,8 @@ class TestZVMNeutronAgent(base.BaseTestCase):
 
     _FAKE_XCAT_USER = "fake_xcat_user"
     _FAKE_XCAT_PW = "fake_xcat_password"
+    _FAKE_HOST = {'zvm_host': 'zvm_host',
+                  'ipl_time': 'zvm uptime 1'}
 
     def setUp(self):
         super(TestZVMNeutronAgent, self).setUp()
@@ -52,38 +53,34 @@ class TestZVMNeutronAgent(base.BaseTestCase):
                               group='ml2_type_flat')
         cfg.CONF.set_override('network_vlan_ranges', VLAN_NETWORKS,
                               group='ml2_type_vlan')
-        cfg.CONF.set_override('xcat_mgt_ip', '10.10.10.1',
-                              group='AGENT')
-        cfg.CONF.set_override('xcat_mgt_mask', '255.255.255.0',
-                              group='AGENT')
-        cfg.CONF.set_override('zvm_xcat_username', self._FAKE_XCAT_USER,
-                              group='AGENT')
-        cfg.CONF.set_override('zvm_xcat_password', self._FAKE_XCAT_PW,
-                              group='AGENT')
 
         mock.patch('neutron.openstack.common.loopingcall.'
                    'FixedIntervalLoopingCall',
                   new=FakeLoopingCall)
+
         with mock.patch(
                 'neutron.plugins.zvm.common.utils.zvmUtils') as mock_Utils:
-            instance = mock_Utils.return_value
-            get_zhcp_userid = mock.MagicMock(return_value='zhcp_user')
-            create_xcat_mgt_network = mock.MagicMock()
+            with mock.patch(
+                    'zvmsdk.api.SDKAPI') as mock_SDKAPI:
+                APIinstance = mock_SDKAPI.return_value
+                host_get_info = mock.MagicMock(return_value=self._FAKE_HOST)
+                APIinstance.host_get_info = host_get_info
 
-            instance.get_zhcp_userid = get_zhcp_userid
-            instance.create_xcat_mgt_network = create_xcat_mgt_network
-            net_attrs = {'fake_uuid1': {
-                    'vswitch': 'fake_vsw', 'userid': 'fake_user1'}}
-            instance.re_grant_user = mock.MagicMock(return_value=net_attrs)
-            instance.query_xcat_uptime = mock.MagicMock(
+                instance = mock_Utils.return_value
+                net_attrs = {'fake_uuid1': {
+                        'vswitch': 'fake_vsw', 'userid': 'fake_user1'}}
+                instance.re_grant_user = mock.MagicMock(
+                                                return_value=net_attrs)
+                instance.query_xcat_uptime = mock.MagicMock(
                                                 return_value="xcat uptime 1")
-            instance.query_zvm_uptime = mock.MagicMock(
-                                                return_value="zvm uptime 1")
 
-            self.agent = zvm_neutron_agent.zvmNeutronAgent()
-            self.agent.plugin_rpc = mock.Mock()
-            self.agent.context = mock.Mock()
-            self.agent.agent_id = mock.Mock()
+                with mock.patch(
+                    'zvmsdk.utils.create_xcat_mgt_network',
+                    mock.MagicMock()):
+                    self.agent = zvm_neutron_agent.zvmNeutronAgent()
+                    self.agent.plugin_rpc = mock.Mock()
+                    self.agent.context = mock.Mock()
+                    self.agent.agent_id = mock.Mock()
 
     def test_port_bound_vlan(self):
         vid = 100
@@ -110,10 +107,9 @@ class TestZVMNeutronAgent(base.BaseTestCase):
             enable_vlan = True
 
         with mock.patch.multiple(
-                self.agent._utils,
-                couple_nic_to_vswitch=mock.MagicMock(),
-                put_user_direct_online=mock.MagicMock(),
-                set_vswitch_port_vlan_id=mock_enable_vlan):
+                self.agent._sdk_api,
+                vswitch_grant_user=mock.MagicMock(),
+                vswitch_set_vlan_id_for_user=mock_enable_vlan):
 
             self.agent.port_bound(port, net_uuid, network_type, None,
                                   vid, 'fake_user')
@@ -180,21 +176,28 @@ class TestZVMNeutronAgent(base.BaseTestCase):
                                         'unknown_port')
             self.assertTrue(self.agent.plugin_rpc.update_device_down.called)
 
-    def test_port_update_up(self):
+    @mock.patch('neutron.plugins.zvm.common.utils.zvmUtils.'
+                'get_nic_settings')
+    def test_port_update_up(self, get_nic):
+        get_nic.retrun_value = 'vdev'
+
         with mock.patch.object(self.agent.plugin_rpc,
                         "update_device_up") as rpc:
-            with mock.patch.object(self.agent._utils,
-                        "couple_nic_to_vswitch") as couple:
+            with mock.patch.object(self.agent._sdk_api,
+                        "guest_nic_couple_to_vswitch") as couple:
                 self.agent.port_update(None, port={'id': 'fake_uuid1',
                                                 'admin_state_up': True})
                 self.assertTrue(rpc.called)
                 self.assertTrue(couple.called)
 
-    def test_port_update_down(self):
+    @mock.patch('neutron.plugins.zvm.common.utils.zvmUtils.'
+                'get_nic_settings')
+    def test_port_update_down(self, get_nic):
+        get_nic.retrun_value = 'vdev'
         with mock.patch.object(self.agent.plugin_rpc,
                         "update_device_down") as rpc:
-            with mock.patch.object(self.agent._utils,
-                        "uncouple_nic_from_vswitch") as couple:
+            with mock.patch.object(self.agent._sdk_api,
+                        "guest_nic_uncouple_from_vswitch") as couple:
                 self.agent.port_update(None, port={'id': 'fake_uuid1',
                                                 'admin_state_up': False})
                 self.assertTrue(rpc.called)
@@ -217,29 +220,35 @@ class TestZVMNeutronAgent(base.BaseTestCase):
 
         self.agent._treat_vif_port('port_id', 'network_id', 'flat',
                                    'vsw1', '10', False)
-        self.assertTrue(self.agent._utils.grant_user.called)
+        self.assertTrue(self.agent._sdk_api.vswitch_grant_user.called)
 
     def test_handle_restart_zvm(self):
         q_xcat = mock.MagicMock(return_value="xcat uptime 2")
-        q_zvm = mock.MagicMock(return_value="zvm uptime 2")
         re_grant = mock.MagicMock()
+        host_info = {'zvm_host': 'zvm_host',
+                     'ipl_time': 'zvm uptime 2'}
+        g_info = mock.MagicMock(return_value=host_info)
 
         with mock.patch.multiple(
                 self.agent._utils,
                 query_xcat_uptime=q_xcat,
-                query_zvm_uptime=q_zvm,
                 re_grant_user=re_grant):
-            self.agent._restart_handler.send(None)
-            self.assertTrue(re_grant.called)
-            self.assertTrue(self.agent._utils.create_xcat_mgt_network.called)
+            with mock.patch.multiple(
+                    self.agent._sdk_api,
+                    host_get_info=g_info):
+                with mock.patch(
+                        'zvmsdk.utils.create_xcat_mgt_network',
+                        mock.MagicMock()):
+                    self.agent._restart_handler.send(None)
+                    self.assertTrue(q_xcat.called)
+                    self.assertTrue(g_info.called)
+                    self.assertTrue(re_grant.called)
 
-    @mock.patch('neutron.plugins.zvm.common.utils.zvmUtils.'
-                'create_xcat_mgt_network')
-    def test_handle_restart_zvm_exception(self, mk_create_net):
-        q_xcat = mock.MagicMock(side_effect=exception.zVMConfigException(
+    def test_handle_restart_zvm_exception(self):
+        i_xcat = mock.MagicMock(side_effect=exception.zVMConfigException(
                                                 msg="xcat Config exception"))
-        with mock.patch.object(self.agent._utils, "create_xcat_mgt_network",
-                               q_xcat):
+        with mock.patch.object(self.agent, "_init_xcat_mgt",
+                               i_xcat):
             self.agent._restart_handler.send(None)
             self.assertRaises(exception.zVMConfigException,
                               self.agent._handle_restart)
