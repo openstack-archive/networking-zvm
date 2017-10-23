@@ -29,7 +29,6 @@ from neutron._i18n import _
 from neutron.agent import rpc as agent_rpc
 from neutron.common import config as common_config
 from neutron.common import topics
-from neutron.plugins.common import constants as p_const
 from neutron.plugins.ml2.drivers.zvm import mech_zvm
 from neutron.plugins.zvm.agent import zvm_network
 from neutron.plugins.zvm.common import config as cfg
@@ -188,7 +187,7 @@ class zvmNeutronAgent(object):
                   'userid': userid})
 
         self._sdk_api.vswitch_grant_user(physical_network, userid)
-        if network_type == p_const.TYPE_VLAN:
+        if network_type == q_const.TYPE_VLAN:
             LOG.info('Binding VLAN, VLAN ID: %(segmentation_id)s, '
                      'port_id: %(port_id)s',
                      {'segmentation_id': segmentation_id,
