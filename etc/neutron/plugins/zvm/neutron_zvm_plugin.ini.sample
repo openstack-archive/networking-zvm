@@ -1,21 +1,5 @@
 [AGENT]
-# (StrOpt) xCat REST API username, default value is admin.
-# zvm_xcat_username = admin
-# Example: zvm_xcat_username = guest
-
-# (StrOpt) Password of the xCat REST API user, default value is admin
-# zvm_xcat_password = admin
-# Example: zvm_xcat_password = passw0rd
-
-# (StrOpt) xCat MN server address, IP address or host name
-# zvm_xcat_server = YourxCATMNServerAddress
-# Example: zvm_xcat_server = 10.0.0.1
-
-# (StrOpt) xCat zHCP nodename in xCAT, default value is zhcp
-# xcat_zhcp_nodename = zhcp
-# Example: xcat_zhcp_nodename = myzhcp1
-
-# (StrOpt) The compute node name neutron-zvm-agent work on, same as 'host'in nova.conf
+# (StrOpt) The compute node name neutron-zvm-agent work on, same as 'host' in nova.conf
 # This property is optional. If it is not specified, 'host' in neutron.conf will be
 # used. Moreover, 'host' in neutron.conf is recommended and this property is deprecated.
 # zvm_host = opnstk1
@@ -25,18 +9,11 @@
 # polling_interval = 2
 # Example: polling_interval = 5
 
-# (IntOpt) The number of seconds the agent will wait for
-# xCAT MN response, default value is 300 seconds
-# zvm_xcat_timeout = 300
-# Example: zvm_xcat_timeout = 600
 
-# (StrOpt ) xcat management NIC IP.
-# xcat_mgt_ip = 10.1.0.1
-# Example: xcat_mgt_ip=10.1.0.1
-
-# (StrOpt ) xcat management NIC mask.
-# xcat_mgt_mask=255.255.0.0
-# Example: xcat_mgt_mask=255.255.0.0
+# (URIOpt) URL to be used to communicate with z/VM Cloud Connector.
+# Example: https://10.10.10.1:8080.
+# cloud_connector_url = https://10.10.10.1:8080
+# Example: cloud_connector_url = https://10.10.10.1:8080
 
 # (StrOpt ) rdev_list for each vswitch's uplink real device(s), seperated by ','.
 # If a vswitch does not connect an OSA, which means it does not connect to
@@ -53,7 +30,7 @@
 
 # 1. Single FLAT Mode
 # Physical network names should be identical to z/VM vswitch names. In
-# this sample, xcatvsw2 is used for xCAT Management Network, it should be a
+# this sample, xcatvsw2 is used for physical network, it should be a
 # Layer 2, VLAN UNAWARE vswitch in z/VM. When create neutron network, set
 # xcatvsw2 provider network_type to flat
 
@@ -67,23 +44,16 @@
 # Neutron z/VM Agent:
 #
 # [AGENT]
-# zvm_xcat_username = admin
-# zvm_xcat_password = admin
-# zvm_xcat_server = 10.0.0.1
-# xcat_zhcp_nodename = zhcp
 # polling_interval = 2
-# zvm_xcat_timeout = 300
-# xcat_mgt_ip = 10.1.0.1
-# xcat_mgt_mask=255.255.0.0
+# cloud_connector_url = https://10.10.10.1:8080
 
 # 2. FLAT, VLAN mixed Mode
 # Physical network names should be identical to z/VM vswitch names. In
-# this sample, xcatvsw2 is used for xCAT Management Network, it should be a
+# this sample, xcatvsw2 is used for physical network it should be a
 # Layer 2, VLAN UNAWARE vswitch in z/VM, xcatvsw3 is used for OpenStack
-# Compute/Data Network, it is a Layer 2, VLAN AWARE vswitch in z/VM. xCAT
-# Management Network MUST be the first created network. This configuration
-# also can used for single FLAT network mode if you only create only one
-# FLAT network with xcatvsw2
+# Compute/Data Network, it is a Layer 2, VLAN AWARE vswitch in z/VM.
+# This configuration also can used for single FLAT network mode if you
+# only create only one FLAT network with xcatvsw2
 
 # Neutron server:
 #
@@ -95,14 +65,8 @@
 # Neutron z/VM Agent:
 #
 # [AGENT]
-# zvm_xcat_username = admin
-# zvm_xcat_password = admin
-# zvm_xcat_server = 10.0.0.1
-# xcat_zhcp_nodename = zhcp
 # polling_interval = 2
-# zvm_xcat_timeout = 300
-# xcat_mgt_ip = 10.1.0.1
-# xcat_mgt_mask=255.255.0.0
+# cloud_connector_url = https://10.10.10.1:8080
 #
 # [xcatvsw3]
 # rdev_list=6243

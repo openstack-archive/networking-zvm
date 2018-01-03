@@ -26,6 +26,12 @@ agent_opts = [
         default=2,
         help=_("The number of seconds the agent will wait between "
         "polling for local device changes.")),
+    cfg.URIOpt('cloud_connector_url',
+               schemes=['http', 'https'],
+               sample_default='http://zvm.example.org:8080/',
+               help="""
+URL to be used to communicate with z/VM Cloud Connector.
+"""),
 ]
 
 CONF = cfg.CONF
