@@ -28,7 +28,24 @@ class zVMConnectorRequestHandler(object):
 
     def __init__(self):
         _url = urlparse.urlparse(CONF.AGENT.cloud_connector_url)
-        self._conn = connector.ZVMConnector(_url.hostname, _url.port)
+        _ca_file = CONF.AGENT.zvm_ca_file
+        _token_file = CONF.AGENT.zvm_token_file
+        kwargs = {}
+        if _url.scheme == 'https':
+            kwargs['ssl_enabled'] = True
+        else:
+            kwargs['ssl_enabled'] = False
+
+        if _token_file is not None:
+            kwargs['token_path'] = False
+
+        if ((kwargs['ssl_enabled']) and
+            (_ca_file is not None)):
+            kwargs['verify'] = _ca_file
+        else:
+            kwargs['verify'] = False
+
+        self._conn = connector.ZVMConnector(_url.hostname, _url.port, **kwargs)
 
     def call(self, func_name, *args, **kwargs):
         results = self._conn.send_request(func_name, *args, **kwargs)

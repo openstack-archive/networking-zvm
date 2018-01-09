@@ -16,6 +16,7 @@
 Unit tests for the z/VM utils.
 """
 import mock
+import os
 
 from oslo_config import cfg
 
@@ -24,16 +25,159 @@ from neutron.plugins.zvm.common import utils
 from neutron.tests import base
 from zvmconnector import connector
 
-SDK_URL = 'https://10.10.10.1:8080'
+HTTPS_SDK_URL = 'https://10.10.10.1:8080'
+HTTP_SDK_URL = 'http://10.10.10.1:8080'
+CA_FILE = '/tmp/ca.pem'
+TOKEN_FILE = '/tmp/token.dat'
 
 
-class TestZVMUtils(base.BaseTestCase):
+class TestZVMUtils_HTTPS_without_verify(base.BaseTestCase):
     def setUp(self):
-        super(TestZVMUtils, self).setUp()
+        super(TestZVMUtils_HTTPS_without_verify, self).setUp()
         self.addCleanup(cfg.CONF.reset)
-        cfg.CONF.set_override('cloud_connector_url', SDK_URL,
+        cfg.CONF.set_override('cloud_connector_url', HTTPS_SDK_URL,
                               group='AGENT')
         self._utils = utils.zVMConnectorRequestHandler()
+
+    @mock.patch.object(connector.ZVMConnector, 'send_request')
+    def test_call(self, request):
+        request.return_value = {"overallRC": 0, 'output': "OK"}
+        info = self._utils.call('API', "parm1", "parm2")
+        request.assert_called_with('API', "parm1", "parm2")
+        self.assertEqual("OK", info)
+
+    @mock.patch.object(connector.ZVMConnector, 'send_request')
+    def test_call_exception(self, request):
+        request.return_value = {"overallRC": 1, 'output': ""}
+        self.assertRaises(exception.ZVMSDKRequestFailed,
+                          self._utils.call,
+                          "API")
+
+
+class TestZVMUtils_HTTPS_with_verify(base.BaseTestCase):
+    def setUp(self):
+        super(TestZVMUtils_HTTPS_with_verify, self).setUp()
+        if not os.path.exists(CA_FILE):
+            os.mknod(CA_FILE)
+        cfg.CONF.set_override('cloud_connector_url', HTTPS_SDK_URL,
+                              group='AGENT')
+        cfg.CONF.set_override('zvm_ca_file', CA_FILE,
+                              group='AGENT')
+        self._utils = utils.zVMConnectorRequestHandler()
+        self.addCleanup(cfg.CONF.reset)
+        self.addCleanup(os.remove, CA_FILE)
+
+    @mock.patch.object(connector.ZVMConnector, 'send_request')
+    def test_call(self, request):
+        request.return_value = {"overallRC": 0, 'output': "OK"}
+        info = self._utils.call('API', "parm1", "parm2")
+        request.assert_called_with('API', "parm1", "parm2")
+        self.assertEqual("OK", info)
+
+    @mock.patch.object(connector.ZVMConnector, 'send_request')
+    def test_call_exception(self, request):
+        request.return_value = {"overallRC": 1, 'output': ""}
+        self.assertRaises(exception.ZVMSDKRequestFailed,
+                          self._utils.call,
+                          "API")
+
+
+class TestZVMUtils_HTTP_without_verify(base.BaseTestCase):
+    def setUp(self):
+        super(TestZVMUtils_HTTP_without_verify, self).setUp()
+        self.addCleanup(cfg.CONF.reset)
+        cfg.CONF.set_override('cloud_connector_url', HTTP_SDK_URL,
+                              group='AGENT')
+        self._utils = utils.zVMConnectorRequestHandler()
+
+    @mock.patch.object(connector.ZVMConnector, 'send_request')
+    def test_call(self, request):
+        request.return_value = {"overallRC": 0, 'output': "OK"}
+        info = self._utils.call('API', "parm1", "parm2")
+        request.assert_called_with('API', "parm1", "parm2")
+        self.assertEqual("OK", info)
+
+    @mock.patch.object(connector.ZVMConnector, 'send_request')
+    def test_call_exception(self, request):
+        request.return_value = {"overallRC": 1, 'output': ""}
+        self.assertRaises(exception.ZVMSDKRequestFailed,
+                          self._utils.call,
+                          "API")
+
+
+class TestZVMUtils_HTTP_with_verify(base.BaseTestCase):
+    def setUp(self):
+        super(TestZVMUtils_HTTP_with_verify, self).setUp()
+        if not os.path.exists(CA_FILE):
+            os.mknod(CA_FILE)
+        cfg.CONF.set_override('cloud_connector_url', HTTP_SDK_URL,
+                              group='AGENT')
+        cfg.CONF.set_override('zvm_ca_file', CA_FILE,
+                              group='AGENT')
+        self._utils = utils.zVMConnectorRequestHandler()
+        self.addCleanup(cfg.CONF.reset)
+        self.addCleanup(os.remove, CA_FILE)
+
+    @mock.patch.object(connector.ZVMConnector, 'send_request')
+    def test_call(self, request):
+        request.return_value = {"overallRC": 0, 'output': "OK"}
+        info = self._utils.call('API', "parm1", "parm2")
+        request.assert_called_with('API', "parm1", "parm2")
+        self.assertEqual("OK", info)
+
+    @mock.patch.object(connector.ZVMConnector, 'send_request')
+    def test_call_exception(self, request):
+        request.return_value = {"overallRC": 1, 'output': ""}
+        self.assertRaises(exception.ZVMSDKRequestFailed,
+                          self._utils.call,
+                          "API")
+
+
+class TestZVMUtils_HTTP_token_with_verify(base.BaseTestCase):
+    def setUp(self):
+        super(TestZVMUtils_HTTP_token_with_verify, self).setUp()
+        if not os.path.exists(CA_FILE):
+            os.mknod(CA_FILE)
+        if not os.path.exists(TOKEN_FILE):
+            os.mknod(TOKEN_FILE)
+        cfg.CONF.set_override('cloud_connector_url', HTTP_SDK_URL,
+                              group='AGENT')
+        cfg.CONF.set_override('zvm_ca_file', CA_FILE,
+                              group='AGENT')
+        cfg.CONF.set_override('zvm_token_file', TOKEN_FILE,
+                              group='AGENT')
+        self._utils = utils.zVMConnectorRequestHandler()
+        self.addCleanup(cfg.CONF.reset)
+        self.addCleanup(os.remove, CA_FILE)
+        self.addCleanup(os.remove, TOKEN_FILE)
+
+    @mock.patch.object(connector.ZVMConnector, 'send_request')
+    def test_call(self, request):
+        request.return_value = {"overallRC": 0, 'output': "OK"}
+        info = self._utils.call('API', "parm1", "parm2")
+        request.assert_called_with('API', "parm1", "parm2")
+        self.assertEqual("OK", info)
+
+    @mock.patch.object(connector.ZVMConnector, 'send_request')
+    def test_call_exception(self, request):
+        request.return_value = {"overallRC": 1, 'output': ""}
+        self.assertRaises(exception.ZVMSDKRequestFailed,
+                          self._utils.call,
+                          "API")
+
+
+class TestZVMUtils_HTTPS_token_without_verify(base.BaseTestCase):
+    def setUp(self):
+        super(TestZVMUtils_HTTPS_token_without_verify, self).setUp()
+        if not os.path.exists(TOKEN_FILE):
+            os.mknod(TOKEN_FILE)
+        cfg.CONF.set_override('cloud_connector_url', HTTPS_SDK_URL,
+                              group='AGENT')
+        cfg.CONF.set_override('zvm_token_file', TOKEN_FILE,
+                              group='AGENT')
+        self._utils = utils.zVMConnectorRequestHandler()
+        self.addCleanup(cfg.CONF.reset)
+        self.addCleanup(os.remove, TOKEN_FILE)
 
     @mock.patch.object(connector.ZVMConnector, 'send_request')
     def test_call(self, request):
