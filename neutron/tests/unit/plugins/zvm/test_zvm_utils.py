@@ -61,7 +61,7 @@ class TestZVMUtils_HTTPS_with_verify(base.BaseTestCase):
             os.mknod(CA_FILE)
         cfg.CONF.set_override('cloud_connector_url', HTTPS_SDK_URL,
                               group='AGENT')
-        cfg.CONF.set_override('zvm_ca_file', CA_FILE,
+        cfg.CONF.set_override('zvm_cloud_connector_ca_file', CA_FILE,
                               group='AGENT')
         self._utils = utils.zVMConnectorRequestHandler()
         self.addCleanup(cfg.CONF.reset)
@@ -112,7 +112,7 @@ class TestZVMUtils_HTTP_with_verify(base.BaseTestCase):
             os.mknod(CA_FILE)
         cfg.CONF.set_override('cloud_connector_url', HTTP_SDK_URL,
                               group='AGENT')
-        cfg.CONF.set_override('zvm_ca_file', CA_FILE,
+        cfg.CONF.set_override('zvm_cloud_connector_ca_file', CA_FILE,
                               group='AGENT')
         self._utils = utils.zVMConnectorRequestHandler()
         self.addCleanup(cfg.CONF.reset)
@@ -142,9 +142,9 @@ class TestZVMUtils_HTTP_token_with_verify(base.BaseTestCase):
             os.mknod(TOKEN_FILE)
         cfg.CONF.set_override('cloud_connector_url', HTTP_SDK_URL,
                               group='AGENT')
-        cfg.CONF.set_override('zvm_ca_file', CA_FILE,
+        cfg.CONF.set_override('zvm_cloud_connector_ca_file', CA_FILE,
                               group='AGENT')
-        cfg.CONF.set_override('zvm_token_file', TOKEN_FILE,
+        cfg.CONF.set_override('zvm_cloud_connector_token_file', TOKEN_FILE,
                               group='AGENT')
         self._utils = utils.zVMConnectorRequestHandler()
         self.addCleanup(cfg.CONF.reset)
@@ -173,7 +173,7 @@ class TestZVMUtils_HTTPS_token_without_verify(base.BaseTestCase):
             os.mknod(TOKEN_FILE)
         cfg.CONF.set_override('cloud_connector_url', HTTPS_SDK_URL,
                               group='AGENT')
-        cfg.CONF.set_override('zvm_token_file', TOKEN_FILE,
+        cfg.CONF.set_override('zvm_cloud_connector_token_file', TOKEN_FILE,
                               group='AGENT')
         self._utils = utils.zVMConnectorRequestHandler()
         self.addCleanup(cfg.CONF.reset)

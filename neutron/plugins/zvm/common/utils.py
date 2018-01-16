@@ -28,8 +28,8 @@ class zVMConnectorRequestHandler(object):
 
     def __init__(self):
         _url = urlparse.urlparse(CONF.AGENT.cloud_connector_url)
-        _ca_file = CONF.AGENT.zvm_ca_file
-        _token_file = CONF.AGENT.zvm_token_file
+        _ca_file = CONF.AGENT.zvm_cloud_connector_ca_file
+        _token_file = CONF.AGENT.zvm_cloud_connector_token_file
         kwargs = {}
         if _url.scheme == 'https':
             kwargs['ssl_enabled'] = True
@@ -37,7 +37,7 @@ class zVMConnectorRequestHandler(object):
             kwargs['ssl_enabled'] = False
 
         if _token_file is not None:
-            kwargs['token_path'] = False
+            kwargs['token_path'] = _token_file
 
         if ((kwargs['ssl_enabled']) and
             (_ca_file is not None)):

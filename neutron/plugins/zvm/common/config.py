@@ -32,13 +32,13 @@ agent_opts = [
                help="""
 URL to be used to communicate with z/VM Cloud Connector.
 """),
-    cfg.StrOpt('zvm_ca_file',
+    cfg.StrOpt('zvm_cloud_connector_ca_file',
                default=None,
                help="""
 CA certificate file to be verified in httpd server.
 A string, it must be a path to a CA bundle to use.
 """),
-    cfg.StrOpt('zvm_token_file',
+    cfg.StrOpt('zvm_cloud_connector_token_file',
                default=None,
                help="""
 Token file that contains admin-token to access sdk http server.
