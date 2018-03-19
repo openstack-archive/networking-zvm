@@ -18,6 +18,7 @@ import eventlet
 import sys
 import time
 
+from neutron_lib.agent import topics
 from neutron_lib import constants as q_const
 from neutron_lib import context
 from oslo_log import log as logging
@@ -25,7 +26,6 @@ from oslo_service import loopingcall
 
 from neutron.agent import rpc as agent_rpc
 from neutron.common import config as common_config
-from neutron.common import topics
 from neutron.plugins.ml2.drivers.zvm import mech_zvm
 from neutron.plugins.zvm.agent import zvm_network
 from neutron.plugins.zvm.common import config as cfg
