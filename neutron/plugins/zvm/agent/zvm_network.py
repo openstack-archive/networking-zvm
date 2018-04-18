@@ -14,10 +14,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from neutron_lib.plugins import utils as plugin_utils
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from neutron.plugins.common import utils as plugin_utils
 from neutron.plugins.zvm.common import utils
 
 LOG = logging.getLogger(__name__)
