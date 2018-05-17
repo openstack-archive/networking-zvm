@@ -247,9 +247,6 @@ class zvmNeutronAgent(object):
                                                         'segmentation_id']
 
                     if details.get('admin_state_up'):
-                        LOG.info("Setting status for %s to UP", device)
-                        self.plugin_rpc.update_device_up(
-                            self.context, device, self.agent_id, self._host)
                         mac = ''.join(details['mac_address'].split(':'))[6:]
                         if not nics_info.get(userid):
                             nics_info[userid] = []
@@ -277,6 +274,10 @@ class zvmNeutronAgent(object):
                                             details['physical_network'])
 
                         LOG.debug("New added NIC info: %s", nics_info[userid])
+
+                        LOG.info("Setting status for %s to UP", device)
+                        self.plugin_rpc.update_device_up(
+                            self.context, device, self.agent_id, self._host)
                     else:
                         LOG.info("Setting status for %s to DOWN", device)
                         self.plugin_rpc.update_device_down(
