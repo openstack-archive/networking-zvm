@@ -1,4 +1,4 @@
-# Copyright 2014 IBM Corp.
+# Copyright 2014, 2018 IBM Corp.
 #
 # All Rights Reserved.
 #
@@ -14,9 +14,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 from neutron_lib.api.definitions import portbindings
 
-from neutron.plugins.common import constants as p_constants
+from neutron.plugins.common import constants
 from neutron.plugins.ml2.drivers import mech_agent
 
 
@@ -40,8 +41,8 @@ class ZvmMechanismDriver(mech_agent.SimpleAgentMechanismDriverBase):
             {portbindings.CAP_PORT_FILTER: False})
 
     def get_allowed_network_types(self, agent=None):
-        return [p_constants.TYPE_LOCAL, p_constants.TYPE_FLAT,
-                p_constants.TYPE_VLAN]
+        return [constants.TYPE_LOCAL, constants.TYPE_FLAT,
+                constants.TYPE_VLAN]
 
     def get_mappings(self, agent):
         return agent['configurations'].get('vswitch_mappings', {})
