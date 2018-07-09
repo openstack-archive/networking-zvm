@@ -1,0 +1,8 @@
+Code-Review+2: Ya Lian Pan <ylpan@cn.ibm.com>
+Workflow+1: Ya Lian Pan <ylpan@cn.ibm.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Mon, 09 Jul 2018 07:06:37 +0000
+Reviewed-on: https://review.openstack.org/579767
+Project: openstack/networking-zvm
+Branch: refs/heads/stable/pike
