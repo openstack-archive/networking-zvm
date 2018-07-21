@@ -220,7 +220,8 @@ class zvmNeutronAgent(object):
             try:
                 details = self.plugin_rpc.get_device_details(self.context,
                                                              device,
-                                                             self.agent_id)
+                                                             self.agent_id,
+                                                             self._host)
             except Exception:
                 LOG.info("Unable to get port details for %s:", device)
                 continue
