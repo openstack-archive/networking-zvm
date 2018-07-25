@@ -1,0 +1,8 @@
+Code-Review+2: Huang Rui <bjhuangr@cn.ibm.com>
+Workflow+1: Huang Rui <bjhuangr@cn.ibm.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Wed, 25 Jul 2018 07:59:54 +0000
+Reviewed-on: https://review.openstack.org/585650
+Project: openstack/networking-zvm
+Branch: refs/heads/master
