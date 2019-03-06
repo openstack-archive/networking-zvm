@@ -33,7 +33,9 @@ driver.
 
 In file /etc/neutron/neutron.conf
 ---------------------------------
+
 base_mac
+^^^^^^^^
  **Optional**
 
  **Section:** DEFAULT
@@ -63,6 +65,7 @@ core_plugin
  
 In file /etc/neutron/plugins/ml2/ml2_conf.ini
 ---------------------------------------------
+
 flat_networks
 ^^^^^^^^^^^^^
  **Optional (with network_vlan_ranges)**
@@ -161,6 +164,7 @@ type_drivers
 
 In file /etc/neutron/plugins/zvm/neutron_zvm_plugin.ini
 -------------------------------------------------------
+
 cloud_connector_url
 ^^^^^^^^^^^^^^^^^^^
  **Required**
@@ -175,7 +179,7 @@ polling_interval
 
  **Section:** AGENT
 
- **Value:** Integer – agent polling interval specified in number of seconds.
+ **Value:** Integer - agent polling interval specified in number of seconds.
 
  **Notes:** This value depends on the network and workload. The default value
  is 2.
