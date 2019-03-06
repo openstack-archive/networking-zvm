@@ -57,7 +57,7 @@ Sample cases
 Links
 -----
 
-* Documentation: `<http://networking-zvm.readthedocs.io/en/latest/>`_
+* Documentation: `<https://networking-zvm.readthedocs.io/en/latest/>`_
 * Source: `<http://git.openstack.org/cgit/openstack/networking-zvm>`_
 * Github shadow: `<https://github.com/openstack/networking-zvm>`_
 * Bugs: `<http://bugs.launchpad.net/networking-zvm>`_
