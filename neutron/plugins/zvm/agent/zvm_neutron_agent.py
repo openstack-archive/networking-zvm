@@ -39,7 +39,7 @@ CONF = cfg.CONF
 def restart_wrapper(func):
     def wrapper(*args, **kw):
         gen = func(*args, **kw)
-        gen.next()
+        next(gen)
         return gen
     return wrapper
 
