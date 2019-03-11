@@ -44,8 +44,6 @@ class TestZVMNeutronAgent(base.BaseTestCase):
         self.addCleanup(cfg.CONF.reset)
         cfg.CONF.set_override('cloud_connector_url', SDK_URL,
                               group='AGENT')
-        cfg.CONF.set_override('rpc_backend',
-                              'neutron.openstack.common.rpc.impl_fake')
         cfg.CONF.set_override('flat_networks', FLAT_NETWORKS,
                               group='ml2_type_flat')
         cfg.CONF.set_override('network_vlan_ranges', VLAN_NETWORKS,
