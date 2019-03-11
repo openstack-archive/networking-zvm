@@ -1,0 +1,9 @@
+Verified+1: IBM zVM CI <zvmosci@us.ibm.com>
+Code-Review+2: Huang Rui <bjhuangr@cn.ibm.com>
+Workflow+1: Huang Rui <bjhuangr@cn.ibm.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Mon, 11 Mar 2019 02:01:10 +0000
+Reviewed-on: https://review.openstack.org/641592
+Project: openstack/networking-zvm
+Branch: refs/heads/master
